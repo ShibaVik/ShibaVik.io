@@ -9,7 +9,124 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      positions: {
+        Row: {
+          amount: number
+          avg_price: number
+          contract_address: string | null
+          crypto_name: string
+          crypto_symbol: string
+          current_price: number | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          avg_price: number
+          contract_address?: string | null
+          crypto_name: string
+          crypto_symbol: string
+          current_price?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          avg_price?: number
+          contract_address?: string | null
+          crypto_name?: string
+          crypto_symbol?: string
+          current_price?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          current_balance: number | null
+          email: string | null
+          id: string
+          initial_balance: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_balance?: number | null
+          email?: string | null
+          id: string
+          initial_balance?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_balance?: number | null
+          email?: string | null
+          id?: string
+          initial_balance?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          contract_address: string | null
+          created_at: string | null
+          crypto_name: string
+          crypto_symbol: string
+          id: string
+          price: number
+          total: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          contract_address?: string | null
+          created_at?: string | null
+          crypto_name: string
+          crypto_symbol: string
+          id?: string
+          price: number
+          total: number
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          contract_address?: string | null
+          created_at?: string | null
+          crypto_name?: string
+          crypto_symbol?: string
+          id?: string
+          price?: number
+          total?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

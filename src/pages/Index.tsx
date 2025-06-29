@@ -1,14 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
 import TransactionHistory from '@/components/TransactionHistory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CryptoData {
   id: string;
@@ -37,13 +41,65 @@ interface Position {
 }
 
 const Index = () => {
-  const [balance, setBalance] = useState(10000); // $10,000 démo
+  const { user, signOut } = useAuth();
+  const { profile, updateBalance } = useProfile();
   const [searchAddress, setSearchAddress] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const { toast } = useToast();
+
+  const balance = profile?.current_balance || 0;
+
+  // Charger les données utilisateur depuis Supabase
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    try {
+      // Charger les transactions
+      const { data: transactionsData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (transactionsData) {
+        const formattedTransactions = transactionsData.map(t => ({
+          id: t.id,
+          type: t.type as 'buy' | 'sell',
+          crypto: t.crypto_symbol,
+          amount: Number(t.amount),
+          price: Number(t.price),
+          total: Number(t.total),
+          timestamp: new Date(t.created_at)
+        }));
+        setTransactions(formattedTransactions);
+      }
+
+      // Charger les positions
+      const { data: positionsData } = await supabase
+        .from('positions')
+        .select('*')
+        .eq('user_id', user?.id);
+
+      if (positionsData) {
+        const formattedPositions = positionsData.map(p => ({
+          crypto: p.crypto_symbol,
+          amount: Number(p.amount),
+          avgPrice: Number(p.avg_price),
+          currentPrice: Number(p.current_price)
+        }));
+        setPositions(formattedPositions);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
 
   // Fonction pour rechercher une crypto par adresse avec DexScreener
   const searchCrypto = async () => {
@@ -60,7 +116,6 @@ const Index = () => {
     try {
       console.log('Recherche pour l\'adresse:', searchAddress);
       
-      // Utiliser l'API DexScreener qui supporte pump.fun et autres DEX
       const response = await fetch(
         `https://api.dexscreener.com/latest/dex/tokens/${searchAddress}`
       );
@@ -76,7 +131,6 @@ const Index = () => {
         throw new Error('Aucune paire trouvée pour ce token');
       }
 
-      // Prendre la première paire (généralement la plus liquide)
       const pair = data.pairs[0];
       const tokenInfo = pair.baseToken.address.toLowerCase() === searchAddress.toLowerCase() 
         ? pair.baseToken 
@@ -133,7 +187,6 @@ const Index = () => {
             price_change_percentage_24h: priceChange24h
           } : null);
 
-          // Mettre à jour les prix actuels dans les positions
           setPositions(prev => prev.map(pos => 
             pos.crypto === cryptoData.symbol 
               ? { ...pos, currentPrice: priceUsd }
@@ -154,9 +207,9 @@ const Index = () => {
     }
   }, [cryptoData]);
 
-  // Fonction pour exécuter un trade
-  const executeTrade = (type: 'buy' | 'sell', amount: number) => {
-    if (!cryptoData) return;
+  // Fonction pour exécuter un trade et sauvegarder en base
+  const executeTrade = async (type: 'buy' | 'sell', amount: number) => {
+    if (!cryptoData || !user) return;
 
     const total = amount * cryptoData.current_price;
 
@@ -170,28 +223,71 @@ const Index = () => {
         return;
       }
 
-      setBalance(prev => prev - total);
+      // Mettre à jour le solde dans Supabase
+      const success = await updateBalance(balance - total);
+      if (!success) return;
       
-      // Mettre à jour les positions
-      setPositions(prev => {
-        const existingPosition = prev.find(p => p.crypto === cryptoData.symbol);
-        if (existingPosition) {
-          const newAmount = existingPosition.amount + amount;
-          const newAvgPrice = ((existingPosition.amount * existingPosition.avgPrice) + total) / newAmount;
-          return prev.map(p => 
-            p.crypto === cryptoData.symbol 
-              ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: cryptoData.current_price }
-              : p
-          );
-        } else {
-          return [...prev, {
-            crypto: cryptoData.symbol,
-            amount,
-            avgPrice: cryptoData.current_price,
-            currentPrice: cryptoData.current_price
-          }];
-        }
-      });
+      // Sauvegarder la transaction
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: 'buy',
+          crypto_symbol: cryptoData.symbol,
+          crypto_name: cryptoData.name,
+          amount: amount,
+          price: cryptoData.current_price,
+          total: total,
+          contract_address: cryptoData.contract_address
+        });
+
+      if (transactionError) {
+        console.error('Error saving transaction:', transactionError);
+      }
+
+      // Mettre à jour ou créer la position
+      const existingPosition = positions.find(p => p.crypto === cryptoData.symbol);
+      if (existingPosition) {
+        const newAmount = existingPosition.amount + amount;
+        const newAvgPrice = ((existingPosition.amount * existingPosition.avgPrice) + total) / newAmount;
+        
+        await supabase
+          .from('positions')
+          .upsert({
+            user_id: user.id,
+            crypto_symbol: cryptoData.symbol,
+            crypto_name: cryptoData.name,
+            amount: newAmount,
+            avg_price: newAvgPrice,
+            current_price: cryptoData.current_price,
+            contract_address: cryptoData.contract_address
+          });
+
+        setPositions(prev => prev.map(p => 
+          p.crypto === cryptoData.symbol 
+            ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: cryptoData.current_price }
+            : p
+        ));
+      } else {
+        await supabase
+          .from('positions')
+          .insert({
+            user_id: user.id,
+            crypto_symbol: cryptoData.symbol,
+            crypto_name: cryptoData.name,
+            amount: amount,
+            avg_price: cryptoData.current_price,
+            current_price: cryptoData.current_price,
+            contract_address: cryptoData.contract_address
+          });
+
+        setPositions(prev => [...prev, {
+          crypto: cryptoData.symbol,
+          amount,
+          avgPrice: cryptoData.current_price,
+          currentPrice: cryptoData.current_price
+        }]);
+      }
 
       toast({
         title: "Achat réussi",
@@ -208,12 +304,47 @@ const Index = () => {
         return;
       }
 
-      setBalance(prev => prev + total);
-      setPositions(prev => prev.map(p => 
-        p.crypto === cryptoData.symbol 
-          ? { ...p, amount: p.amount - amount }
-          : p
-      ).filter(p => p.amount > 0));
+      // Mettre à jour le solde
+      const success = await updateBalance(balance + total);
+      if (!success) return;
+
+      // Sauvegarder la transaction
+      await supabase
+        .from('transactions')
+        .insert({
+          user_id: user.id,
+          type: 'sell',
+          crypto_symbol: cryptoData.symbol,
+          crypto_name: cryptoData.name,
+          amount: amount,
+          price: cryptoData.current_price,
+          total: total,
+          contract_address: cryptoData.contract_address
+        });
+
+      // Mettre à jour la position
+      const newAmount = position.amount - amount;
+      if (newAmount > 0) {
+        await supabase
+          .from('positions')
+          .update({ amount: newAmount })
+          .eq('user_id', user.id)
+          .eq('crypto_symbol', cryptoData.symbol);
+
+        setPositions(prev => prev.map(p => 
+          p.crypto === cryptoData.symbol 
+            ? { ...p, amount: newAmount }
+            : p
+        ));
+      } else {
+        await supabase
+          .from('positions')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('crypto_symbol', cryptoData.symbol);
+
+        setPositions(prev => prev.filter(p => p.crypto !== cryptoData.symbol));
+      }
 
       toast({
         title: "Vente réussie",
@@ -221,7 +352,7 @@ const Index = () => {
       });
     }
 
-    // Ajouter la transaction à l'historique
+    // Ajouter la transaction à l'état local
     const newTransaction: Transaction = {
       id: Date.now().toString(),
       type,
@@ -239,12 +370,30 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-            🚀 MemeCoin Trading Simulator
-          </h1>
-          <p className="text-gray-400">Tradez avec de l'argent virtuel - Zéro risque, 100% fun!</p>
-          <p className="text-sm text-gray-500">Compatible avec pump.fun, DexScreener et autres DEX</p>
+        <div className="flex justify-between items-center">
+          <div className="text-center space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+              🚀 MemeCoin Trading Simulator
+            </h1>
+            <p className="text-gray-400">Tradez avec de l'argent virtuel - Zéro risque, 100% fun!</p>
+            <p className="text-sm text-gray-500">Compatible avec pump.fun, DexScreener et autres DEX</p>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm">
+              <User className="h-4 w-4" />
+              <span className="text-gray-300">{user?.email}</span>
+            </div>
+            <Button 
+              onClick={signOut}
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Déconnexion
+            </Button>
+          </div>
         </div>
 
         {/* Balance Card */}
@@ -256,15 +405,18 @@ const Index = () => {
                   <Wallet className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Solde Démo</p>
+                  <p className="text-sm text-gray-400">Solde Actuel</p>
                   <p className="text-2xl font-bold text-green-400">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
-              <Badge variant="secondary" className="bg-green-600/20 text-green-400">
-                DÉMO
-              </Badge>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">Solde Initial</p>
+                <p className="text-lg font-semibold text-blue-400">
+                  ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
