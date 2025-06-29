@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ const Index = () => {
   const [positions, setPositions] = useState<Position[]>([]);
   const { toast } = useToast();
 
-  // Fonction pour rechercher une crypto par adresse
+  // Fonction pour rechercher une crypto par adresse avec DexScreener
   const searchCrypto = async () => {
     if (!searchAddress.trim()) {
       toast({
@@ -59,33 +58,51 @@ const Index = () => {
 
     setLoading(true);
     try {
-      // Utilisation de l'API CoinGecko pour rechercher par adresse de contrat
+      console.log('Recherche pour l\'adresse:', searchAddress);
+      
+      // Utiliser l'API DexScreener qui supporte pump.fun et autres DEX
       const response = await fetch(
-        `https://api.coingecko.com/api/v3/coins/ethereum/contract/${searchAddress}`
+        `https://api.dexscreener.com/latest/dex/tokens/${searchAddress}`
       );
       
       if (!response.ok) {
-        throw new Error('Crypto non trouvée');
+        throw new Error('Token non trouvé');
       }
 
       const data = await response.json();
+      console.log('Données reçues de DexScreener:', data);
+      
+      if (!data.pairs || data.pairs.length === 0) {
+        throw new Error('Aucune paire trouvée pour ce token');
+      }
+
+      // Prendre la première paire (généralement la plus liquide)
+      const pair = data.pairs[0];
+      const tokenInfo = pair.baseToken.address.toLowerCase() === searchAddress.toLowerCase() 
+        ? pair.baseToken 
+        : pair.quoteToken;
+
+      const priceUsd = parseFloat(pair.priceUsd || '0');
+      const priceChange24h = parseFloat(pair.priceChange24h || '0');
+
       setCryptoData({
-        id: data.id,
-        symbol: data.symbol.toUpperCase(),
-        name: data.name,
-        current_price: data.market_data.current_price.usd,
-        price_change_percentage_24h: data.market_data.price_change_percentage_24h,
+        id: tokenInfo.address,
+        symbol: tokenInfo.symbol,
+        name: tokenInfo.name,
+        current_price: priceUsd,
+        price_change_percentage_24h: priceChange24h,
         contract_address: searchAddress
       });
 
       toast({
         title: "Succès",
-        description: `${data.name} trouvé !`
+        description: `${tokenInfo.name} (${tokenInfo.symbol}) trouvé !`
       });
     } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
       toast({
         title: "Erreur",
-        description: "Crypto non trouvée ou adresse invalide",
+        description: "Token non trouvé ou adresse invalide. Vérifiez que c'est une adresse valide sur Solana ou Ethereum.",
         variant: "destructive"
       });
       setCryptoData(null);
@@ -93,6 +110,49 @@ const Index = () => {
       setLoading(false);
     }
   };
+
+  // Fonction pour rafraîchir le prix
+  const refreshPrice = async () => {
+    if (!cryptoData || !cryptoData.contract_address) return;
+
+    try {
+      const response = await fetch(
+        `https://api.dexscreener.com/latest/dex/tokens/${cryptoData.contract_address}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.pairs && data.pairs.length > 0) {
+          const pair = data.pairs[0];
+          const priceUsd = parseFloat(pair.priceUsd || '0');
+          const priceChange24h = parseFloat(pair.priceChange24h || '0');
+
+          setCryptoData(prev => prev ? {
+            ...prev,
+            current_price: priceUsd,
+            price_change_percentage_24h: priceChange24h
+          } : null);
+
+          // Mettre à jour les prix actuels dans les positions
+          setPositions(prev => prev.map(pos => 
+            pos.crypto === cryptoData.symbol 
+              ? { ...pos, currentPrice: priceUsd }
+              : pos
+          ));
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement:', error);
+    }
+  };
+
+  // Rafraîchir le prix toutes les 30 secondes
+  useEffect(() => {
+    if (cryptoData) {
+      const interval = setInterval(refreshPrice, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [cryptoData]);
 
   // Fonction pour exécuter un trade
   const executeTrade = (type: 'buy' | 'sell', amount: number) => {
@@ -184,6 +244,7 @@ const Index = () => {
             🚀 MemeCoin Trading Simulator
           </h1>
           <p className="text-gray-400">Tradez avec de l'argent virtuel - Zéro risque, 100% fun!</p>
+          <p className="text-sm text-gray-500">Compatible avec pump.fun, DexScreener et autres DEX</p>
         </div>
 
         {/* Balance Card */}
@@ -219,7 +280,7 @@ const Index = () => {
           <CardContent className="space-y-4">
             <div className="flex space-x-2">
               <Input
-                placeholder="Entrez l'adresse du contrat (ex: 0x...)"
+                placeholder="Adresse du contrat (Solana, Ethereum, BSC...)"
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
                 className="bg-gray-700 border-gray-600 text-white flex-1"
@@ -231,6 +292,12 @@ const Index = () => {
               >
                 {loading ? "..." : "Rechercher"}
               </Button>
+            </div>
+            
+            <div className="text-xs text-gray-400 space-y-1">
+              <p>💡 Exemples d'adresses :</p>
+              <p>• Solana: 9BB6W7Q...  (tokens pump.fun)</p>
+              <p>• Ethereum: 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
             </div>
             
             {cryptoData && (
@@ -249,7 +316,13 @@ const Index = () => {
                   </div>
                 </div>
                 <p className="text-2xl font-bold text-blue-400">
-                  ${cryptoData.current_price.toFixed(8)}
+                  {cryptoData.current_price < 0.001 
+                    ? `$${cryptoData.current_price.toExponential(3)}`
+                    : `$${cryptoData.current_price.toFixed(8)}`
+                  }
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Prix actualisé automatiquement
                 </p>
               </div>
             )}
