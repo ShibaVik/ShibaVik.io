@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
@@ -13,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 interface CryptoData {
   id: string;
@@ -43,14 +43,16 @@ interface Position {
 const Index = () => {
   const { user, signOut } = useAuth();
   const { profile, updateBalance } = useProfile();
+  const navigate = useNavigate();
   const [searchAddress, setSearchAddress] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
+  const [demoBalance, setDemoBalance] = useState(10000);
   const { toast } = useToast();
 
-  const balance = profile?.current_balance || 0;
+  const balance = user ? (profile?.current_balance || 0) : demoBalance;
 
   // Charger les données utilisateur depuis Supabase
   useEffect(() => {
@@ -101,7 +103,6 @@ const Index = () => {
     }
   };
 
-  // Fonction pour rechercher une crypto par adresse avec DexScreener
   const searchCrypto = async () => {
     if (!searchAddress.trim()) {
       toast({
@@ -165,7 +166,6 @@ const Index = () => {
     }
   };
 
-  // Fonction pour rafraîchir le prix
   const refreshPrice = async () => {
     if (!cryptoData || !cryptoData.contract_address) return;
 
@@ -199,7 +199,6 @@ const Index = () => {
     }
   };
 
-  // Rafraîchir le prix toutes les 30 secondes
   useEffect(() => {
     if (cryptoData) {
       const interval = setInterval(refreshPrice, 30000);
@@ -207,12 +206,32 @@ const Index = () => {
     }
   }, [cryptoData]);
 
-  // Fonction pour exécuter un trade et sauvegarder en base
   const executeTrade = async (type: 'buy' | 'sell', amount: number) => {
-    if (!cryptoData || !user) return;
+    if (!cryptoData) return;
 
     const total = amount * cryptoData.current_price;
 
+    if (!user) {
+      // Mode démo - pas de sauvegarde
+      if (type === 'buy') {
+        if (total > demoBalance) {
+          toast({
+            title: "Erreur",
+            description: "Solde insuffisant (mode démo)",
+            variant: "destructive"
+          });
+          return;
+        }
+        setDemoBalance(prev => prev - total);
+        toast({
+          title: "Achat réussi (mode démo)",
+          description: `Acheté ${amount} ${cryptoData.symbol} pour $${total.toFixed(2)}. Connectez-vous pour sauvegarder vos trades.`
+        });
+      }
+      return;
+    }
+
+    // Mode connecté - sauvegarde en base
     if (type === 'buy') {
       if (total > balance) {
         toast({
@@ -223,12 +242,10 @@ const Index = () => {
         return;
       }
 
-      // Mettre à jour le solde dans Supabase
       const success = await updateBalance(balance - total);
       if (!success) return;
       
-      // Sauvegarder la transaction
-      const { error: transactionError } = await supabase
+      await supabase
         .from('transactions')
         .insert({
           user_id: user.id,
@@ -241,11 +258,6 @@ const Index = () => {
           contract_address: cryptoData.contract_address
         });
 
-      if (transactionError) {
-        console.error('Error saving transaction:', transactionError);
-      }
-
-      // Mettre à jour ou créer la position
       const existingPosition = positions.find(p => p.crypto === cryptoData.symbol);
       if (existingPosition) {
         const newAmount = existingPosition.amount + amount;
@@ -304,11 +316,9 @@ const Index = () => {
         return;
       }
 
-      // Mettre à jour le solde
       const success = await updateBalance(balance + total);
       if (!success) return;
 
-      // Sauvegarder la transaction
       await supabase
         .from('transactions')
         .insert({
@@ -322,7 +332,6 @@ const Index = () => {
           contract_address: cryptoData.contract_address
         });
 
-      // Mettre à jour la position
       const newAmount = position.amount - amount;
       if (newAmount > 0) {
         await supabase
@@ -352,7 +361,6 @@ const Index = () => {
       });
     }
 
-    // Ajouter la transaction à l'état local
     const newTransaction: Transaction = {
       id: Date.now().toString(),
       type,
@@ -369,32 +377,57 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header with Auth */}
         <div className="flex justify-between items-center">
           <div className="text-center space-y-2">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-              🚀 MemeCoin Trading Simulator
+              🚀 ShibaVik.io
             </h1>
-            <p className="text-gray-400">Tradez avec de l'argent virtuel - Zéro risque, 100% fun!</p>
+            <p className="text-gray-400">Simulateur de trading de MemeCoin</p>
             <p className="text-sm text-gray-500">Compatible avec pump.fun, DexScreener et autres DEX</p>
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm">
-              <User className="h-4 w-4" />
-              <span className="text-gray-300">{user?.email}</span>
-            </div>
-            <Button 
-              onClick={signOut}
-              variant="outline"
-              size="sm"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Déconnexion
-            </Button>
+            {user ? (
+              <>
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="h-4 w-4" />
+                  <span className="text-gray-300">{user.email}</span>
+                </div>
+                <Button 
+                  onClick={signOut}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Déconnexion
+                </Button>
+              </>
+            ) : (
+              <Button 
+                onClick={() => navigate('/auth')}
+                variant="outline"
+                size="sm"
+                className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Se connecter / S'inscrire
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Info message for demo mode */}
+        {!user && (
+          <Card className="bg-blue-900/20 border-blue-500/50">
+            <CardContent className="p-4">
+              <p className="text-blue-200 text-center">
+                💡 Vous utilisez le mode démo. Connectez-vous pour sauvegarder vos trades en permanence !
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Balance Card */}
         <Card className="bg-gray-800/50 border-gray-700">
@@ -405,18 +438,22 @@ const Index = () => {
                   <Wallet className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Solde Actuel</p>
+                  <p className="text-sm text-gray-400">
+                    {user ? 'Solde Actuel' : 'Solde Démo'}
+                  </p>
                   <p className="text-2xl font-bold text-green-400">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Solde Initial</p>
-                <p className="text-lg font-semibold text-blue-400">
-                  ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
-                </p>
-              </div>
+              {user && (
+                <div className="text-right">
+                  <p className="text-sm text-gray-400">Solde Initial</p>
+                  <p className="text-lg font-semibold text-blue-400">
+                    ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -482,32 +519,40 @@ const Index = () => {
         </Card>
 
         {/* Trading Interface */}
-        {cryptoData && (
-          <Tabs defaultValue="trade" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-              <TabsTrigger value="trade">Trading</TabsTrigger>
-              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-              <TabsTrigger value="history">Historique</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="trade">
+        <Tabs defaultValue="trade" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-800">
+            <TabsTrigger value="trade">Trading</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+            <TabsTrigger value="history">Historique</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="trade">
+            {cryptoData ? (
               <TradingInterface 
                 cryptoData={cryptoData} 
                 balance={balance}
                 onTrade={executeTrade}
                 positions={positions}
               />
-            </TabsContent>
-            
-            <TabsContent value="portfolio">
-              <Portfolio positions={positions} />
-            </TabsContent>
-            
-            <TabsContent value="history">
-              <TransactionHistory transactions={transactions} />
-            </TabsContent>
-          </Tabs>
-        )}
+            ) : (
+              <Card className="bg-gray-800/50 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <p className="text-gray-400">
+                    Recherchez une crypto-monnaie pour commencer à trader
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="portfolio">
+            <Portfolio positions={positions} />
+          </TabsContent>
+          
+          <TabsContent value="history">
+            <TransactionHistory transactions={transactions} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

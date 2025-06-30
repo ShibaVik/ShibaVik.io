@@ -7,14 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Rocket } from 'lucide-react';
+import { Loader2, Rocket, ArrowLeft, Mail } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [initialBalance, setInitialBalance] = useState(10000);
   const [isLoading, setIsLoading] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +37,10 @@ const Auth = () => {
 
       if (error) throw error;
 
+      setShowEmailVerification(true);
       toast({
         title: "Compte créé !",
-        description: "Vérifiez votre email pour confirmer votre compte."
+        description: "Vérifiez votre email pour confirmer votre compte avant de vous connecter."
       });
     } catch (error: any) {
       toast({
@@ -63,11 +67,10 @@ const Auth = () => {
 
       toast({
         title: "Connexion réussie !",
-        description: "Bienvenue dans votre simulateur de trading."
+        description: "Bienvenue sur ShibaVik.io"
       });
 
-      // Redirection vers la page principale
-      window.location.href = '/';
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
@@ -79,9 +82,79 @@ const Auth = () => {
     }
   };
 
+  if (showEmailVerification) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center space-x-2">
+              <Rocket className="h-8 w-8 text-green-400" />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                ShibaVik.io
+              </h1>
+            </div>
+          </div>
+
+          <Card className="bg-gray-800/50 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-center text-white flex items-center justify-center space-x-2">
+                <Mail className="h-5 w-5 text-green-400" />
+                <span>Vérifiez votre email</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div className="p-4 bg-green-900/20 border border-green-500/50 rounded-lg">
+                <p className="text-green-200 mb-2">
+                  Un email de confirmation a été envoyé à :
+                </p>
+                <p className="font-semibold text-green-400">{email}</p>
+              </div>
+              
+              <div className="space-y-2 text-sm text-gray-300">
+                <p>📧 Cliquez sur le lien dans l'email pour activer votre compte</p>
+                <p>🔒 Une fois confirmé, vous pourrez vous connecter</p>
+                <p className="text-yellow-400">
+                  ⚠️ N'oubliez pas de vérifier vos spams !
+                </p>
+              </div>
+
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => setShowEmailVerification(false)}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                >
+                  Retour
+                </Button>
+                <Button 
+                  onClick={() => navigate('/')}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Continuer en mode démo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Button
+            onClick={() => navigate('/')}
+            variant="ghost"
+            size="sm"
+            className="text-gray-400 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+        </div>
+
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center space-x-2">
             <Rocket className="h-8 w-8 text-green-400" />
@@ -208,7 +281,8 @@ const Auth = () => {
         </Card>
 
         <div className="text-center text-sm text-gray-400">
-          <p>Vos données de trading seront sauvegardées de manière sécurisée</p>
+          <p>💡 L'inscription permet de sauvegarder vos trades en permanence</p>
+          <p>✅ Vous pouvez aussi utiliser le mode démo sans inscription</p>
         </div>
       </div>
     </div>
