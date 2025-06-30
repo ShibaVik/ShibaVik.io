@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
 import TransactionHistory from '@/components/TransactionHistory';
+import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -553,6 +554,8 @@ const Index = () => {
             <TransactionHistory transactions={transactions} />
           </TabsContent>
         </Tabs>
+
+        <Footer />
       </div>
     </div>
   );
