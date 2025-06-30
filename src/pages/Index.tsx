@@ -376,30 +376,52 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header with Auth */}
-        <div className="flex justify-between items-center">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-              🚀 ShibaVik.io
-            </h1>
-            <p className="text-gray-400">Simulateur de trading de MemeCoin</p>
-            <p className="text-sm text-gray-500">Compatible avec pump.fun, DexScreener et autres DEX</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white relative overflow-hidden">
+      {/* Blockchain-inspired background pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-20 left-10 w-4 h-4 border border-cyan-400 rotate-45 animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-6 h-6 border border-blue-500 rotate-12 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-40 left-20 w-5 h-5 border border-purple-500 rotate-45 animate-pulse delay-500"></div>
+        <div className="absolute bottom-20 right-40 w-3 h-3 border border-green-400 rotate-12 animate-pulse delay-700"></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto space-y-8 p-4 relative z-10">
+        {/* Header with Auth - Enhanced design */}
+        <div className="flex justify-between items-center bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
+          <div className="text-center space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-xl">S</span>
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
+                  ShibaVik.io
+                </h1>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <p className="text-gray-300 text-sm">Simulateur de trading MemeCoin</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-cyan-400 text-sm font-medium">
+              ⚡ Compatible pump.fun, DexScreener & DEX
+            </p>
           </div>
           
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <div className="flex items-center space-x-2 text-sm">
-                  <User className="h-4 w-4" />
-                  <span className="text-gray-300">{user.email}</span>
+                <div className="flex items-center space-x-3 bg-gray-700/50 rounded-xl px-4 py-2 border border-gray-600/50">
+                  <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="text-gray-100 font-medium">{user.email}</span>
                 </div>
                 <Button 
                   onClick={signOut}
                   variant="outline"
                   size="sm"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Déconnexion
@@ -408,9 +430,8 @@ const Index = () => {
             ) : (
               <Button 
                 onClick={() => navigate('/auth')}
-                variant="outline"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20 transition-all duration-200"
                 size="sm"
-                className="border-green-600 text-green-400 hover:bg-green-600 hover:text-white"
               >
                 <LogIn className="h-4 w-4 mr-2" />
                 Se connecter / S'inscrire
@@ -419,38 +440,41 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Info message for demo mode */}
+        {/* Info message for demo mode - Enhanced visibility */}
         {!user && (
-          <Card className="bg-blue-900/20 border-blue-500/50">
-            <CardContent className="p-4">
-              <p className="text-blue-200 text-center">
-                💡 Vous utilisez le mode démo. Connectez-vous pour sauvegarder vos trades en permanence !
-              </p>
+          <Card className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-cyan-500/30 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center space-x-3">
+                <span className="text-2xl">💡</span>
+                <p className="text-cyan-100 text-center font-medium">
+                  Mode démo actif - Connectez-vous pour sauvegarder vos trades en permanence !
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Balance Card */}
-        <Card className="bg-gray-800/50 border-gray-700">
+        {/* Balance Card - Enhanced design */}
+        <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-green-600 rounded-full">
-                  <Wallet className="h-6 w-6" />
+              <div className="flex items-center space-x-4">
+                <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg shadow-green-500/20">
+                  <Wallet className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-gray-300 text-sm font-medium">
                     {user ? 'Solde Actuel' : 'Solde Démo'}
                   </p>
-                  <p className="text-2xl font-bold text-green-400">
+                  <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               {user && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Solde Initial</p>
-                  <p className="text-lg font-semibold text-blue-400">
+                <div className="text-right bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
+                  <p className="text-blue-300 text-sm font-medium">Solde Initial</p>
+                  <p className="text-xl font-bold text-blue-400">
                     ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
                   </p>
                 </div>
@@ -459,72 +483,76 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Search Section */}
-        <Card className="bg-gray-800/50 border-gray-700">
+        {/* Search Section - Enhanced visibility */}
+        <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Search className="h-5 w-5" />
+            <CardTitle className="flex items-center space-x-3 text-gray-100">
+              <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
+                <Search className="h-5 w-5 text-white" />
+              </div>
               <span>Rechercher une MemeCoin</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex space-x-2">
+          <CardContent className="space-y-6">
+            <div className="flex space-x-3">
               <Input
                 placeholder="Adresse du contrat (Solana, Ethereum, BSC...)"
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white flex-1"
+                className="bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400 flex-1 backdrop-blur-sm"
               />
               <Button 
                 onClick={searchCrypto} 
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20"
               >
                 {loading ? "..." : "Rechercher"}
               </Button>
             </div>
             
-            <div className="text-xs text-gray-400 space-y-1">
-              <p>💡 Exemples d'adresses :</p>
-              <p>• Solana: 9BB6W7Q...  (tokens pump.fun)</p>
-              <p>• Ethereum: 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
+            <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
+              <p className="text-cyan-400 font-medium mb-2">💡 Exemples d'adresses :</p>
+              <div className="space-y-1 text-sm text-gray-300">
+                <p>• <span className="text-purple-400">Solana:</span> 9BB6W7Q... (tokens pump.fun)</p>
+                <p>• <span className="text-blue-400">Ethereum:</span> 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
+              </div>
             </div>
             
             {cryptoData && (
-              <div className="p-4 bg-gray-700/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-bold">{cryptoData.name} ({cryptoData.symbol})</h3>
-                  <div className="flex items-center space-x-2">
+              <div className="p-6 bg-gradient-to-r from-gray-700/50 to-gray-800/50 rounded-2xl border border-gray-600/50 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-2xl font-bold text-gray-100">{cryptoData.name} ({cryptoData.symbol})</h3>
+                  <div className="flex items-center space-x-3">
                     {cryptoData.price_change_percentage_24h >= 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-400" />
+                      <TrendingUp className="h-5 w-5 text-green-400" />
                     ) : (
-                      <TrendingDown className="h-4 w-4 text-red-400" />
+                      <TrendingDown className="h-5 w-5 text-red-400" />
                     )}
-                    <span className={cryptoData.price_change_percentage_24h >= 0 ? "text-green-400" : "text-red-400"}>
+                    <span className={`font-bold ${cryptoData.price_change_percentage_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
                       {cryptoData.price_change_percentage_24h.toFixed(2)}%
                     </span>
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-blue-400">
+                <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text mb-2">
                   {cryptoData.current_price < 0.001 
                     ? `$${cryptoData.current_price.toExponential(3)}`
                     : `$${cryptoData.current_price.toFixed(8)}`
                   }
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  Prix actualisé automatiquement
+                <p className="text-cyan-400 text-sm">
+                  ⚡ Prix actualisé automatiquement
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Trading Interface */}
-        <Tabs defaultValue="trade" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-            <TabsTrigger value="trade">Trading</TabsTrigger>
-            <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-            <TabsTrigger value="history">Historique</TabsTrigger>
+        {/* Trading Interface - Enhanced tabs */}
+        <Tabs defaultValue="trade" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
+            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Trading</TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Portfolio</TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Historique</TabsTrigger>
           </TabsList>
           
           <TabsContent value="trade">
@@ -536,11 +564,16 @@ const Index = () => {
                 positions={positions}
               />
             ) : (
-              <Card className="bg-gray-800/50 border-gray-700">
-                <CardContent className="p-6 text-center">
-                  <p className="text-gray-400">
-                    Recherchez une crypto-monnaie pour commencer à trader
-                  </p>
+              <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
+                      <Search className="h-8 w-8 text-white" />
+                    </div>
+                    <p className="text-gray-300 text-lg">
+                      Recherchez une crypto-monnaie pour commencer à trader
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             )}
