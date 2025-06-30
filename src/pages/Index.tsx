@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Twitter, Globe } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
@@ -14,6 +14,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CryptoData {
   id: string;
@@ -51,9 +58,84 @@ const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [demoBalance, setDemoBalance] = useState(10000);
+  const [language, setLanguage] = useState('fr');
   const { toast } = useToast();
 
   const balance = user ? (profile?.current_balance || 0) : demoBalance;
+
+  const translations = {
+    fr: {
+      title: "ShibaVik.io",
+      subtitle: "Simulateur de trading MemeCoin",
+      compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
+      developer: "Développé par ShibaVik Student - Cryptography Enthusiast",
+      demoMode: "Mode démo actif - Connectez-vous pour sauvegarder vos trades en permanence !",
+      currentBalance: "Solde Actuel",
+      demoBalance: "Solde Démo",
+      initialBalance: "Solde Initial",
+      searchCrypto: "Rechercher une MemeCoin",
+      contractAddress: "Adresse du contrat (Solana, Ethereum, BSC...)",
+      search: "Rechercher",
+      examples: "💡 Exemples d'adresses :",
+      priceUpdated: "⚡ Prix actualisé automatiquement",
+      trading: "Trading",
+      portfolio: "Portfolio",
+      history: "Historique",
+      searchToTrade: "Recherchez une crypto-monnaie pour commencer à trader",
+      signIn: "Se connecter / S'inscrire",
+      signOut: "Déconnexion"
+    },
+    en: {
+      title: "ShibaVik.io",
+      subtitle: "MemeCoin Trading Simulator",
+      compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
+      developer: "Developed by ShibaVik Student - Cryptography Enthusiast",
+      demoMode: "Demo mode active - Sign in to save your trades permanently!",
+      currentBalance: "Current Balance",
+      demoBalance: "Demo Balance",
+      initialBalance: "Initial Balance",
+      searchCrypto: "Search for a MemeCoin",
+      contractAddress: "Contract address (Solana, Ethereum, BSC...)",
+      search: "Search",
+      examples: "💡 Address examples:",
+      priceUpdated: "⚡ Price updated automatically",
+      trading: "Trading",
+      portfolio: "Portfolio",
+      history: "History",
+      searchToTrade: "Search for a cryptocurrency to start trading",
+      signIn: "Sign In / Sign Up",
+      signOut: "Sign Out"
+    }
+  };
+
+  const t = translations[language as keyof typeof translations];
+
+  const socialLinks = [
+    {
+      name: 'Twitter',
+      url: 'https://twitter.com/Nft_ShibaVik',
+      icon: Twitter,
+      label: '𝕏'
+    },
+    {
+      name: 'LinkedIn',
+      url: 'https://www.linkedin.com/in/sullyvan-milhau',
+      icon: Linkedin,
+      label: 'LinkedIn'
+    },
+    {
+      name: 'OpenSea',
+      url: 'https://opensea.io/ShibaVik',
+      icon: null,
+      label: 'OpenSea'
+    },
+    {
+      name: 'GitHub',
+      url: 'https://github.com/ShibaVik',
+      icon: Github,
+      label: 'GitHub'
+    }
+  ];
 
   // Charger les données utilisateur depuis Supabase
   useEffect(() => {
@@ -386,29 +468,71 @@ const Index = () => {
       </div>
 
       <div className="max-w-7xl mx-auto space-y-8 p-4 relative z-10">
-        {/* Header with Auth - Enhanced design */}
+        {/* Header with Auth and Language Selector */}
         <div className="flex justify-between items-center bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
           <div className="text-center space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">S</span>
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
-                  ShibaVik.io
-                </h1>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                  <p className="text-gray-300 text-sm">Simulateur de trading MemeCoin</p>
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">S</span>
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
+                    {t.title}
+                  </h1>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <p className="text-gray-300 text-sm">{t.subtitle}</p>
+                  </div>
                 </div>
               </div>
+              
+              {/* Social Links */}
+              <div className="flex items-center space-x-2">
+                {socialLinks.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative flex items-center justify-center w-8 h-8 bg-gray-700/50 rounded-lg border border-gray-600/50 hover:border-cyan-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/20 hover:scale-110"
+                    title={link.name}
+                  >
+                    {link.icon ? (
+                      <link.icon className="h-4 w-4 text-gray-300 group-hover:text-cyan-400 transition-colors duration-300" />
+                    ) : (
+                      <span className="text-sm group-hover:text-cyan-400 transition-colors duration-300">
+                        🌊
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
             </div>
-            <p className="text-cyan-400 text-sm font-medium">
-              ⚡ Compatible pump.fun, DexScreener & DEX
-            </p>
+            
+            <div className="space-y-1">
+              <p className="text-cyan-400 text-sm font-medium">
+                {t.compatible}
+              </p>
+              <p className="text-gray-400 text-xs italic">
+                {t.developer}
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Language Selector */}
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="w-24 bg-gray-700/50 border-gray-600/50 text-gray-100">
+                <Globe className="h-4 w-4 mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectItem value="fr" className="text-gray-100 hover:bg-gray-700">🇫🇷 FR</SelectItem>
+                <SelectItem value="en" className="text-gray-100 hover:bg-gray-700">🇺🇸 EN</SelectItem>
+              </SelectContent>
+            </Select>
+
             {user ? (
               <>
                 <div className="flex items-center space-x-3 bg-gray-700/50 rounded-xl px-4 py-2 border border-gray-600/50">
@@ -424,7 +548,7 @@ const Index = () => {
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
+                  {t.signOut}
                 </Button>
               </>
             ) : (
@@ -434,7 +558,7 @@ const Index = () => {
                 size="sm"
               >
                 <LogIn className="h-4 w-4 mr-2" />
-                Se connecter / S'inscrire
+                {t.signIn}
               </Button>
             )}
           </div>
@@ -442,12 +566,12 @@ const Index = () => {
 
         {/* Info message for demo mode - Enhanced visibility */}
         {!user && (
-          <Card className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border-cyan-500/30 backdrop-blur-sm">
+          <Card className="bg-gray-800/60 border-cyan-500/30 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-center space-x-3">
                 <span className="text-2xl">💡</span>
                 <p className="text-cyan-100 text-center font-medium">
-                  Mode démo actif - Connectez-vous pour sauvegarder vos trades en permanence !
+                  {t.demoMode}
                 </p>
               </div>
             </CardContent>
@@ -464,7 +588,7 @@ const Index = () => {
                 </div>
                 <div>
                   <p className="text-gray-300 text-sm font-medium">
-                    {user ? 'Solde Actuel' : 'Solde Démo'}
+                    {user ? t.currentBalance : t.demoBalance}
                   </p>
                   <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
@@ -473,7 +597,7 @@ const Index = () => {
               </div>
               {user && (
                 <div className="text-right bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
-                  <p className="text-blue-300 text-sm font-medium">Solde Initial</p>
+                  <p className="text-blue-300 text-sm font-medium">{t.initialBalance}</p>
                   <p className="text-xl font-bold text-blue-400">
                     ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
                   </p>
@@ -490,13 +614,13 @@ const Index = () => {
               <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
                 <Search className="h-5 w-5 text-white" />
               </div>
-              <span>Rechercher une MemeCoin</span>
+              <span>{t.searchCrypto}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex space-x-3">
               <Input
-                placeholder="Adresse du contrat (Solana, Ethereum, BSC...)"
+                placeholder={t.contractAddress}
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
                 className="bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400 flex-1 backdrop-blur-sm"
@@ -506,12 +630,12 @@ const Index = () => {
                 disabled={loading}
                 className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20"
               >
-                {loading ? "..." : "Rechercher"}
+                {loading ? "..." : t.search}
               </Button>
             </div>
             
             <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
-              <p className="text-cyan-400 font-medium mb-2">💡 Exemples d'adresses :</p>
+              <p className="text-cyan-400 font-medium mb-2">{t.examples}</p>
               <div className="space-y-1 text-sm text-gray-300">
                 <p>• <span className="text-purple-400">Solana:</span> 9BB6W7Q... (tokens pump.fun)</p>
                 <p>• <span className="text-blue-400">Ethereum:</span> 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
@@ -540,7 +664,7 @@ const Index = () => {
                   }
                 </p>
                 <p className="text-cyan-400 text-sm">
-                  ⚡ Prix actualisé automatiquement
+                  {t.priceUpdated}
                 </p>
               </div>
             )}
@@ -550,9 +674,9 @@ const Index = () => {
         {/* Trading Interface - Enhanced tabs */}
         <Tabs defaultValue="trade" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
-            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Trading</TabsTrigger>
-            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Portfolio</TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">Historique</TabsTrigger>
+            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.trading}</TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.portfolio}</TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.history}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="trade">
@@ -571,7 +695,7 @@ const Index = () => {
                       <Search className="h-8 w-8 text-white" />
                     </div>
                     <p className="text-gray-300 text-lg">
-                      Recherchez une crypto-monnaie pour commencer à trader
+                      {t.searchToTrade}
                     </p>
                   </div>
                 </CardContent>
