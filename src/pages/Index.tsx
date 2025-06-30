@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [demoBalance, setDemoBalance] = useState(10000);
-  const [language, setLanguage] = useState('fr');
+  const [language, setLanguage] = useState('en'); // Changed default to English
   const { toast } = useToast();
 
   const balance = user ? (profile?.current_balance || 0) : demoBalance;
@@ -114,7 +115,7 @@ const Index = () => {
     {
       name: 'Twitter',
       url: 'https://twitter.com/Nft_ShibaVik',
-      icon: Twitter,
+      icon: null, // Changed to null to use custom 𝕏 symbol
       label: '𝕏'
     },
     {
@@ -500,6 +501,10 @@ const Index = () => {
                   >
                     {link.icon ? (
                       <link.icon className="h-4 w-4 text-gray-300 group-hover:text-cyan-400 transition-colors duration-300" />
+                    ) : link.name === 'Twitter' ? (
+                      <span className="text-sm text-gray-300 group-hover:text-cyan-400 transition-colors duration-300 font-bold">
+                        𝕏
+                      </span>
                     ) : (
                       <span className="text-sm group-hover:text-cyan-400 transition-colors duration-300">
                         🌊
