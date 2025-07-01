@@ -2,28 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Globe, Settings as SettingsIcon } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { Search, UserCircle } from 'lucide-react';
 import TradingInterface from '@/components/TradingInterface';
+import PopularCryptos from '@/components/PopularCryptos';
 import Portfolio from '@/components/Portfolio';
 import TransactionHistory from '@/components/TransactionHistory';
 import Settings from '@/components/Settings';
-import PopularCryptos from '@/components/PopularCryptos';
-import Footer from '@/components/Footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import Auth from '@/components/Auth';
 import { useLanguage } from '@/contexts/LanguageContext';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import Footer from '@/components/Footer';
 
 interface CryptoData {
   id: string;
@@ -34,16 +22,6 @@ interface CryptoData {
   contract_address?: string;
 }
 
-interface Transaction {
-  id: string;
-  type: 'buy' | 'sell';
-  crypto: string;
-  amount: number;
-  price: number;
-  total: number;
-  timestamp: Date;
-}
-
 interface Position {
   crypto: string;
   amount: number;
@@ -51,675 +29,276 @@ interface Position {
   currentPrice: number;
 }
 
+interface Transaction {
+  id: string;
+  type: 'buy' | 'sell';
+  crypto: string;
+  amount: number;
+  price: number;
+  timestamp: Date;
+}
+
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const { profile, updateBalance } = useProfile();
-  const { language, setLanguage, t } = useLanguage();
-  const navigate = useNavigate();
-  const [searchAddress, setSearchAddress] = useState('');
-  const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [demoBalance, setDemoBalance] = useState(10000);
-  const [activeTab, setActiveTab] = useState('trade');
+  const { t } = useLanguage();
   const { toast } = useToast();
+  const [balance, setBalance] = useState(10000);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedCrypto, setSelectedCrypto] = useState<CryptoData | null>(null);
+  const [contractAddress, setContractAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const balance = user ? (profile?.current_balance || 0) : demoBalance;
-
-  const socialLinks = [
-    {
-      name: 'Twitter',
-      url: 'https://twitter.com/Nft_ShibaVik',
-      icon: null,
-      label: '𝕏'
-    },
-    {
-      name: 'LinkedIn',
-      url: 'https://www.linkedin.com/in/sullyvan-milhau',
-      icon: Linkedin,
-      label: 'LinkedIn'
-    },
-    {
-      name: 'OpenSea',
-      url: 'https://opensea.io/ShibaVik',
-      icon: null,
-      label: 'OpenSea'
-    },
-    {
-      name: 'GitHub',
-      url: 'https://github.com/ShibaVik',
-      icon: Github,
-      label: 'GitHub'
-    }
-  ];
-
-  // Load user data from Supabase
   useEffect(() => {
-    if (user) {
-      loadUserData();
-    }
-  }, [user]);
+    // Calculate total portfolio value
+    const portfolioValue = positions.reduce((sum, position) => {
+      return sum + (position.amount * position.currentPrice);
+    }, 0);
 
-  // Auto-refresh prices every 30 seconds for memecoins
-  useEffect(() => {
-    if (cryptoData && cryptoData.contract_address) {
-      const interval = setInterval(refreshPrice, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [cryptoData]);
+    setTotalPortfolioValue(balance + portfolioValue);
+  }, [balance, positions]);
 
-  const loadUserData = async () => {
-    try {
-      // Load transactions
-      const { data: transactionsData } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
+  const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
 
-      if (transactionsData) {
-        const formattedTransactions = transactionsData.map(t => ({
-          id: t.id,
-          type: t.type as 'buy' | 'sell',
-          crypto: t.crypto_symbol,
-          amount: Number(t.amount),
-          price: Number(t.price),
-          total: Number(t.total),
-          timestamp: new Date(t.created_at)
-        }));
-        setTransactions(formattedTransactions);
+  const handleTrade = (type: 'buy' | 'sell', amount: number) => {
+    if (!selectedCrypto) return;
+
+    const crypto = selectedCrypto.symbol;
+    const price = selectedCrypto.current_price;
+    const cost = amount * price;
+
+    if (type === 'buy') {
+      if (balance >= cost) {
+        // Update balance
+        setBalance(balance - cost);
+
+        // Update positions
+        const existingPosition = positions.find(p => p.crypto === crypto);
+        if (existingPosition) {
+          const newAmount = existingPosition.amount + amount;
+          const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + cost) / newAmount;
+          setPositions(positions.map(p =>
+            p.crypto === crypto ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: price } : p
+          ));
+        } else {
+          setPositions([...positions, { crypto, amount, avgPrice: price, currentPrice: price }]);
+        }
+
+        // Add transaction
+        const transaction: Transaction = {
+          id: Math.random().toString(36).substring(7),
+          type: 'buy',
+          crypto,
+          amount,
+          price,
+          timestamp: new Date(),
+        };
+        setTransactions([...transactions, transaction]);
+
+        toast({
+          title: "Achat réussi !",
+          description: `Vous avez acheté ${amount} ${crypto} pour $${cost.toFixed(2)}`,
+        })
+      } else {
+        toast({
+          title: "Solde insuffisant",
+          description: "Vous n'avez pas assez de fonds pour effectuer cet achat.",
+          variant: "destructive",
+        })
       }
+    } else if (type === 'sell') {
+      const existingPosition = positions.find(p => p.crypto === crypto);
+      if (existingPosition && existingPosition.amount >= amount) {
+        // Update balance
+        setBalance(balance + cost);
 
-      // Load positions
-      const { data: positionsData } = await supabase
-        .from('positions')
-        .select('*')
-        .eq('user_id', user?.id);
+        // Update positions
+        const newAmount = existingPosition.amount - amount;
+        if (newAmount > 0) {
+          setPositions(positions.map(p =>
+            p.crypto === crypto ? { ...p, amount: newAmount, currentPrice: price } : p
+          ));
+        } else {
+          setPositions(positions.filter(p => p.crypto !== crypto));
+        }
 
-      if (positionsData) {
-        const formattedPositions = positionsData.map(p => ({
-          crypto: p.crypto_symbol,
-          amount: Number(p.amount),
-          avgPrice: Number(p.avg_price),
-          currentPrice: Number(p.current_price)
-        }));
-        setPositions(formattedPositions);
+        // Add transaction
+        const transaction: Transaction = {
+          id: Math.random().toString(36).substring(7),
+          type: 'sell',
+          crypto,
+          amount,
+          price,
+          timestamp: new Date(),
+        };
+        setTransactions([...transactions, transaction]);
+
+        toast({
+          title: "Vente réussie !",
+          description: `Vous avez vendu ${amount} ${crypto} pour $${cost.toFixed(2)}`,
+        })
+      } else {
+        toast({
+          title: "Position insuffisante",
+          description: "Vous n'avez pas assez de tokens pour effectuer cette vente.",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
-      console.error('Error loading user data:', error);
     }
   };
 
   const searchCrypto = async () => {
-    if (!searchAddress.trim()) {
-      toast({
-        title: t('error'),
-        description: "Veuillez entrer une adresse de contrat",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setLoading(true);
     try {
-      console.log('Recherche pour l\'adresse:', searchAddress);
-      
-      const response = await fetch(
-        `https://api.dexscreener.com/latest/dex/tokens/${searchAddress}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Token non trouvé');
+      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${contractAddress}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedCrypto({
+          id: data.id,
+          symbol: data.symbol.toUpperCase(),
+          name: data.name,
+          current_price: data.market_data.current_price.usd,
+          price_change_percentage_24h: data.market_data.price_change_percentage_24h,
+          contract_address: contractAddress,
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de trouver la crypto avec cette adresse de contrat.",
+          variant: "destructive",
+        })
       }
-
-      const data = await response.json();
-      console.log('Données reçues de DexScreener:', data);
-      
-      if (!data.pairs || data.pairs.length === 0) {
-        throw new Error('Aucune paire trouvée pour ce token');
-      }
-
-      const pair = data.pairs[0];
-      const tokenInfo = pair.baseToken.address.toLowerCase() === searchAddress.toLowerCase() 
-        ? pair.baseToken 
-        : pair.quoteToken;
-
-      const priceUsd = parseFloat(pair.priceUsd || '0');
-      const priceChange24h = parseFloat(pair.priceChange24h || '0');
-
-      setCryptoData({
-        id: tokenInfo.address,
-        symbol: tokenInfo.symbol,
-        name: tokenInfo.name,
-        current_price: priceUsd,
-        price_change_percentage_24h: priceChange24h,
-        contract_address: searchAddress
-      });
-
-      toast({
-        title: t('success'),
-        description: `${tokenInfo.name} (${tokenInfo.symbol}) trouvé !`
-      });
-
-      // Switch to trading tab
-      setActiveTab('trade');
     } catch (error) {
-      console.error('Erreur lors de la recherche:', error);
+      console.error('Erreur lors de la recherche de crypto:', error);
       toast({
-        title: t('error'),
-        description: "Token non trouvé ou adresse invalide. Vérifiez que c'est une adresse valide sur Solana ou Ethereum.",
-        variant: "destructive"
-      });
-      setCryptoData(null);
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la recherche de la crypto.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshPrice = async () => {
-    if (!cryptoData || !cryptoData.contract_address) return;
-
-    try {
-      const response = await fetch(
-        `https://api.dexscreener.com/latest/dex/tokens/${cryptoData.contract_address}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.pairs && data.pairs.length > 0) {
-          const pair = data.pairs[0];
-          const priceUsd = parseFloat(pair.priceUsd || '0');
-          const priceChange24h = parseFloat(pair.priceChange24h || '0');
-
-          setCryptoData(prev => prev ? {
-            ...prev,
-            current_price: priceUsd,
-            price_change_percentage_24h: priceChange24h
-          } : null);
-
-          setPositions(prev => prev.map(pos => 
-            pos.crypto === cryptoData.symbol 
-              ? { ...pos, currentPrice: priceUsd }
-              : pos
-          ));
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors du rafraîchissement:', error);
-    }
-  };
-
-  const executeTrade = async (type: 'buy' | 'sell', amount: number) => {
-    if (!cryptoData) return;
-
-    const total = amount * cryptoData.current_price;
-
-    if (!user) {
-      // Demo mode
-      if (type === 'buy') {
-        if (total > demoBalance) {
-          toast({
-            title: t('error'),
-            description: t('insufficientBalance') + " (mode démo)",
-            variant: "destructive"
-          });
-          return;
-        }
-        setDemoBalance(prev => prev - total);
-        toast({
-          title: t('buySuccess') + " (mode démo)",
-          description: `${t('bought')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}. Connectez-vous pour sauvegarder vos trades.`
-        });
-      }
-      return;
-    }
-
-    // Connected mode - save to database
-    if (type === 'buy') {
-      if (total > balance) {
-        toast({
-          title: t('error'),
-          description: t('insufficientBalance'),
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const success = await updateBalance(balance - total);
-      if (!success) return;
-      
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'buy',
-          crypto_symbol: cryptoData.symbol,
-          crypto_name: cryptoData.name,
-          amount: amount,
-          price: cryptoData.current_price,
-          total: total,
-          contract_address: cryptoData.contract_address
-        });
-
-      const existingPosition = positions.find(p => p.crypto === cryptoData.symbol);
-      if (existingPosition) {
-        const newAmount = existingPosition.amount + amount;
-        const newAvgPrice = ((existingPosition.amount * existingPosition.avgPrice) + total) / newAmount;
-        
-        await supabase
-          .from('positions')
-          .upsert({
-            user_id: user.id,
-            crypto_symbol: cryptoData.symbol,
-            crypto_name: cryptoData.name,
-            amount: newAmount,
-            avg_price: newAvgPrice,
-            current_price: cryptoData.current_price,
-            contract_address: cryptoData.contract_address
-          });
-
-        setPositions(prev => prev.map(p => 
-          p.crypto === cryptoData.symbol 
-            ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: cryptoData.current_price }
-            : p
-        ));
-      } else {
-        await supabase
-          .from('positions')
-          .insert({
-            user_id: user.id,
-            crypto_symbol: cryptoData.symbol,
-            crypto_name: cryptoData.name,
-            amount: amount,
-            avg_price: cryptoData.current_price,
-            current_price: cryptoData.current_price,
-            contract_address: cryptoData.contract_address
-          });
-
-        setPositions(prev => [...prev, {
-          crypto: cryptoData.symbol,
-          amount,
-          avgPrice: cryptoData.current_price,
-          currentPrice: cryptoData.current_price
-        }]);
-      }
-
-      toast({
-        title: t('buySuccess'),
-        description: `${t('bought')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}`
-      });
-    } else {
-      const position = positions.find(p => p.crypto === cryptoData.symbol);
-      if (!position || position.amount < amount) {
-        toast({
-          title: t('error'),
-          description: t('insufficientPosition'),
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const success = await updateBalance(balance + total);
-      if (!success) return;
-
-      await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          type: 'sell',
-          crypto_symbol: cryptoData.symbol,
-          crypto_name: cryptoData.name,
-          amount: amount,
-          price: cryptoData.current_price,
-          total: total,
-          contract_address: cryptoData.contract_address
-        });
-
-      const newAmount = position.amount - amount;
-      if (newAmount > 0) {
-        await supabase
-          .from('positions')
-          .update({ amount: newAmount })
-          .eq('user_id', user.id)
-          .eq('crypto_symbol', cryptoData.symbol);
-
-        setPositions(prev => prev.map(p => 
-          p.crypto === cryptoData.symbol 
-            ? { ...p, amount: newAmount }
-            : p
-        ));
-      } else {
-        await supabase
-          .from('positions')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('crypto_symbol', cryptoData.symbol);
-
-        setPositions(prev => prev.filter(p => p.crypto !== cryptoData.symbol));
-      }
-
-      toast({
-        title: t('sellSuccess'),
-        description: `${t('sold')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}`
-      });
-    }
-
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      type,
-      crypto: cryptoData.symbol,
-      amount,
-      price: cryptoData.current_price,
-      total,
-      timestamp: new Date()
-    };
-
-    setTransactions(prev => [newTransaction, ...prev]);
-  };
-
-  const handleSelectCryptoFromPortfolio = (crypto: { symbol: string; current_price: number; name: string; id: string }) => {
-    setCryptoData({
-      id: crypto.id,
-      symbol: crypto.symbol,
-      name: crypto.name,
-      current_price: crypto.current_price,
-      price_change_percentage_24h: 0,
-    });
-    setActiveTab('trade');
-  };
-
-  const handleSelectPopularCrypto = (crypto: any) => {
-    setCryptoData({
-      id: crypto.id,
-      symbol: crypto.symbol,
-      name: crypto.name,
-      current_price: crypto.current_price,
-      price_change_percentage_24h: crypto.price_change_percentage_24h,
-    });
-    setActiveTab('trade');
-  };
-
-  const handleDemoBalanceChange = (newBalance: number) => {
-    setDemoBalance(newBalance);
-    toast({
-      title: "Solde mis à jour",
-      description: `Nouveau solde démo: $${newBalance.toLocaleString()}`
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white relative overflow-hidden">
-      {/* Blockchain-inspired background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-10 w-4 h-4 border border-cyan-400 rotate-45 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-6 h-6 border border-blue-500 rotate-12 animate-pulse delay-1000"></div>
-        <div className="absolute bottom-40 left-20 w-5 h-5 border border-purple-500 rotate-45 animate-pulse delay-500"></div>
-        <div className="absolute bottom-20 right-40 w-3 h-3 border border-green-400 rotate-12 animate-pulse delay-700"></div>
-      </div>
-
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8 p-2 sm:p-4 relative z-10">
-        {/* Header - Responsive */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-700/50 space-y-4 lg:space-y-0">
-          <div className="text-center lg:text-left space-y-3 w-full lg:w-auto">
-            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg sm:text-xl">S</span>
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
-                    {t('title')}
-                  </h1>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <p className="text-gray-300 text-xs sm:text-sm">{t('subtitle')}</p>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+      {/* Header */}
+      <header className="bg-black/20 backdrop-blur-sm border-b border-gray-700/50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">S</span>
               </div>
-              
-              {/* Social Links - Hidden on mobile */}
-              <div className="hidden sm:flex items-center space-x-2">
-                {socialLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative flex items-center justify-center w-8 h-8 bg-gray-700/50 rounded-lg border border-gray-600/50 hover:border-cyan-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/20 hover:scale-110"
-                    title={link.name}
-                  >
-                    {link.icon ? (
-                      <link.icon className="h-4 w-4 text-gray-300 group-hover:text-cyan-400 transition-colors duration-300" />
-                    ) : link.name === 'Twitter' ? (
-                      <span className="text-sm text-gray-300 group-hover:text-cyan-400 transition-colors duration-300 font-bold">
-                        𝕏
-                      </span>
-                    ) : link.name === 'OpenSea' ? (
-                      <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-300">
-                        <span className="text-white text-xs font-bold">OS</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm group-hover:text-cyan-400 transition-colors duration-300">
-                        🌊
-                      </span>
-                    )}
-                  </a>
-                ))}
-              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                ShibaVik.io
+              </h1>
             </div>
             
-            <div className="space-y-1">
-              <p className="text-cyan-400 text-xs sm:text-sm font-medium">
-                {t('compatible')}
-              </p>
-              <p className="text-gray-400 text-xs italic">
-                {t('developer')}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full lg:w-auto">
-            {user ? (
-              <>
-                <div className="flex items-center space-x-3 bg-gray-700/50 rounded-xl px-3 sm:px-4 py-2 border border-gray-600/50">
-                  <div className="w-6 sm:w-8 h-6 sm:h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <User className="h-3 sm:h-4 w-3 sm:w-4 text-white" />
-                  </div>
-                  <span className="text-gray-100 font-medium text-sm sm:text-base truncate">{user.email}</span>
-                </div>
-                <Button 
-                  onClick={signOut}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-200"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">{t('signOut')}</span>
-                  <span className="sm:hidden">Exit</span>
-                </Button>
-              </>
-            ) : (
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-300">Solde: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
+                <p className="text-xs text-gray-400">Mode: Démo</p>
+              </div>
               <Button 
-                onClick={() => navigate('/auth')}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20 transition-all duration-200 w-full sm:w-auto"
-                size="sm"
+                onClick={() => setShowAuth(!showAuth)}
+                variant="outline"
+                className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10"
               >
-                <LogIn className="h-4 w-4 mr-2" />
-                Se connecter
+                <UserCircle className="h-4 w-4 mr-2" />
+                {user ? 'Profil' : 'Connexion'}
               </Button>
-            )}
+            </div>
           </div>
         </div>
+      </header>
 
-        {/* Info message for demo mode */}
-        {!user && (
-          <Card className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border-cyan-400/50 backdrop-blur-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-center space-x-3">
-                <span className="text-2xl">💡</span>
-                <p className="text-cyan-100 text-center font-medium text-sm sm:text-base">
-                  {t('demoMode')}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Balance Card - Improved colors */}
-        <Card className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border-emerald-500/50 backdrop-blur-sm">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl shadow-lg shadow-emerald-500/30">
-                  <Wallet className="h-6 sm:h-8 w-6 sm:w-8 text-white" />
-                </div>
-                <div>
-                  <p className="text-emerald-200 text-sm font-medium">
-                    {user ? t('currentBalance') : t('demoBalance')}
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-transparent bg-gradient-to-r from-emerald-300 to-green-400 bg-clip-text">
-                    ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-              </div>
-              {user && (
-                <div className="text-left sm:text-right bg-blue-900/30 rounded-xl p-3 sm:p-4 border border-blue-400/40">
-                  <p className="text-blue-200 text-sm font-medium">{t('initialBalance')}</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-300">
-                    ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        {/* Settings Panel */}
+        <Settings 
+          demoBalance={balance}
+          onDemoBalanceChange={setBalance}
+          isDemo={true}
+        />
 
         {/* Popular Cryptos */}
-        <PopularCryptos onSelectCrypto={handleSelectPopularCrypto} />
+        <PopularCryptos onSelectCrypto={setSelectedCrypto} />
 
-        {/* Search Section */}
-        <Card className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-500/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-3 text-gray-100">
-              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
-                <Search className="h-5 w-5 text-white" />
-              </div>
-              <span>{t('searchCrypto')}</span>
+        {/* Meme Coin Search */}
+        <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Search className="h-5 w-5" />
+              <span>Rechercher une Meme Coin</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+          <CardContent className="p-6">
+            <div className="flex space-x-4">
               <Input
-                placeholder={t('contractAddress')}
-                value={searchAddress}
-                onChange={(e) => setSearchAddress(e.target.value)}
-                className="bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400 flex-1 backdrop-blur-sm"
+                type="text"
+                placeholder="Adresse du contrat (ex: 7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr)"
+                value={contractAddress}
+                onChange={(e) => setContractAddress(e.target.value)}
+                className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
               />
               <Button 
-                onClick={searchCrypto} 
+                onClick={searchCrypto}
                 disabled={loading}
-                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 border-0 shadow-lg shadow-purple-500/20 w-full sm:w-auto"
+                className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white"
               >
-                {loading ? "..." : t('search')}
+                <Search className="h-4 w-4 mr-2" />
+                {loading ? 'Recherche...' : 'Rechercher'}
               </Button>
             </div>
-            
-            <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
-              <p className="text-cyan-400 font-medium mb-2">{t('examples')}</p>
-              <div className="space-y-1 text-sm text-gray-300">
-                <p>• <span className="text-purple-400">Solana:</span> 9BB6W7Q... (tokens pump.fun)</p>
-                <p>• <span className="text-blue-400">Ethereum:</span> 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
-              </div>
-            </div>
-            
-            {cryptoData && (
-              <div className="p-6 bg-gradient-to-r from-gray-700/50 to-gray-800/50 rounded-2xl border border-gray-600/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-gray-100">{cryptoData.name} ({cryptoData.symbol})</h3>
-                  <div className="flex items-center space-x-3">
-                    {cryptoData.price_change_percentage_24h >= 0 ? (
-                      <TrendingUp className="h-5 w-5 text-green-400" />
-                    ) : (
-                      <TrendingDown className="h-5 w-5 text-red-400" />
-                    )}
-                    <span className={`font-bold ${cryptoData.price_change_percentage_24h >= 0 ? "text-green-400" : "text-red-400"}`}>
-                      {cryptoData.price_change_percentage_24h.toFixed(2)}%
-                    </span>
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text mb-2">
-                  {cryptoData.current_price < 0.001 
-                    ? `$${cryptoData.current_price.toExponential(3)}`
-                    : `$${cryptoData.current_price.toFixed(8)}`
-                  }
-                </p>
-                <p className="text-cyan-400 text-sm">
-                  {t('priceUpdated')}
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
         {/* Trading Interface */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
-            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('trading')}</TabsTrigger>
-            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('portfolio')}</TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('history')}</TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white text-xs sm:text-sm">
-              <SettingsIcon className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Paramètres</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="trade">
-            {cryptoData ? (
-              <TradingInterface 
-                cryptoData={cryptoData} 
-                balance={balance}
-                onTrade={executeTrade}
-                positions={positions}
-              />
-            ) : (
-              <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <div className="space-y-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto">
-                      <Search className="h-8 w-8 text-white" />
-                    </div>
-                    <p className="text-gray-300 text-lg">
-                      {t('searchToTrade')}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="portfolio">
-            <Portfolio 
-              positions={positions} 
-              onSelectCrypto={handleSelectCryptoFromPortfolio}
-            />
-          </TabsContent>
-          
-          <TabsContent value="history">
-            <TransactionHistory transactions={transactions} />
-          </TabsContent>
+        {selectedCrypto && (
+          <TradingInterface
+            cryptoData={selectedCrypto}
+            balance={balance}
+            onTrade={handleTrade}
+            positions={positions}
+          />
+        )}
 
-          <TabsContent value="settings">
-            <Settings 
-              demoBalance={demoBalance}
-              onDemoBalanceChange={handleDemoBalanceChange}
-              isDemo={!user}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Portfolio */}
+        <Portfolio
+          balance={balance}
+          positions={positions}
+          totalPortfolioValue={totalPortfolioValue}
+        />
 
-        <Footer />
+        {/* Transaction History */}
+        {transactions.length > 0 && (
+          <TransactionHistory transactions={transactions} />
+        )}
+
+        {/* Auth Panel */}
+        {showAuth && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-white">Connexion / Inscription</h2>
+                <Button 
+                  onClick={() => setShowAuth(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </Button>
+              </div>
+              <Auth />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Footer with Axiom sponsorship */}
+      <Footer />
     </div>
   );
 };

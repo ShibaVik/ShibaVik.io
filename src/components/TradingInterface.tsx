@@ -87,26 +87,24 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-      {/* Buy Section - Improved colors */}
-      <Card className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-white">
-            <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-            <span>{t('buy')} {cryptoData.symbol}</span>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Buy Section */}
+      <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5" />
+            <span>Acheter {cryptoData.symbol}</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-6 space-y-4">
           <div className="flex space-x-2 mb-4">
             <Button
               variant={buyMode === 'tokens' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setBuyMode('tokens')}
               className={buyMode === 'tokens' 
-                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" 
-                : "border-green-400/50 text-green-300 hover:bg-green-500/10"
+                ? "bg-green-600 hover:bg-green-700 text-white" 
+                : "border-gray-600 text-gray-300 hover:bg-gray-700"
               }
             >
               Tokens
@@ -116,53 +114,55 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
               size="sm"
               onClick={() => setBuyMode('dollars')}
               className={buyMode === 'dollars' 
-                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" 
-                : "border-green-400/50 text-green-300 hover:bg-green-500/10"
+                ? "bg-green-600 hover:bg-green-700 text-white" 
+                : "border-gray-600 text-gray-300 hover:bg-gray-700"
               }
             >
-              USD
+              Total USD
             </Button>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-green-200 font-medium">{t('quantity')}</Label>
+            <Label className="text-gray-200 font-medium">
+              {buyMode === 'tokens' ? 'Quantité' : 'Montant Total'}
+            </Label>
             {buyMode === 'tokens' ? (
               <Input
                 type="number"
-                placeholder={t('amountInTokens')}
+                placeholder="Nombre de tokens"
                 value={buyAmount}
                 onChange={(e) => handleBuyAmountChange(e.target.value, 'tokens')}
-                className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                 max={maxBuyAmount}
               />
             ) : (
               <Input
                 type="number"
-                placeholder={t('amountInDollars')}
+                placeholder="Montant en dollars"
                 value={buyDollarAmount}
                 onChange={(e) => handleBuyAmountChange(e.target.value, 'dollars')}
-                className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                 max={balance}
               />
             )}
-            <p className="text-xs text-green-300">
-              {t('maximum')}: {maxBuyAmount.toLocaleString()} tokens (${balance.toFixed(2)})
+            <p className="text-xs text-gray-400">
+              Maximum: {maxBuyAmount.toLocaleString()} tokens (${balance.toFixed(2)})
             </p>
           </div>
 
           {(buyAmount || buyDollarAmount) && (
-            <div className="p-3 bg-gradient-to-br from-green-800/40 to-emerald-800/40 rounded-lg border border-green-500/40 space-y-1">
-              <div className="flex justify-between text-green-200">
-                <span>{t('unitPrice')}:</span>
+            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 space-y-2">
+              <div className="flex justify-between text-gray-300">
+                <span>Prix unitaire:</span>
                 <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
               </div>
-              <div className="flex justify-between text-green-200">
-                <span>{t('quantity')}:</span>
+              <div className="flex justify-between text-gray-300">
+                <span>Quantité:</span>
                 <span className="text-white">{parseFloat(buyAmount || '0').toLocaleString()}</span>
               </div>
-              <div className="flex justify-between font-bold text-white">
-                <span>{t('total')}:</span>
-                <span className="text-green-300">
+              <div className="flex justify-between font-bold text-white border-t border-gray-600 pt-2">
+                <span>Total:</span>
+                <span className="text-green-400">
                   ${buyDollarAmount || (parseFloat(buyAmount || '0') * cryptoData.current_price).toFixed(2)}
                 </span>
               </div>
@@ -172,33 +172,31 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           <Button 
             onClick={handleBuy}
             disabled={!buyAmount || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > maxBuyAmount}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20"
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
           >
             <DollarSign className="h-4 w-4 mr-2" />
-            {t('buy')}
+            Acheter
           </Button>
         </CardContent>
       </Card>
 
-      {/* Sell Section - Improved colors */}
-      <Card className="bg-gradient-to-br from-red-900/30 to-rose-900/30 border-red-500/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-white">
-            <div className="p-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-lg">
-              <TrendingDown className="h-5 w-5 text-white" />
-            </div>
-            <span>{t('sell')} {cryptoData.symbol}</span>
+      {/* Sell Section */}
+      <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-red-600 to-rose-600 text-white">
+          <CardTitle className="flex items-center space-x-2">
+            <TrendingDown className="h-5 w-5" />
+            <span>Vendre {cryptoData.symbol}</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-6 space-y-4">
           <div className="flex space-x-2 mb-4">
             <Button
               variant={sellMode === 'tokens' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSellMode('tokens')}
               className={sellMode === 'tokens' 
-                ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" 
-                : "border-red-400/50 text-red-300 hover:bg-red-500/10"
+                ? "bg-red-600 hover:bg-red-700 text-white" 
+                : "border-gray-600 text-gray-300 hover:bg-gray-700"
               }
             >
               Tokens
@@ -208,56 +206,58 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
               size="sm"
               onClick={() => setSellMode('dollars')}
               className={sellMode === 'dollars' 
-                ? "bg-gradient-to-r from-red-500 to-rose-600 text-white" 
-                : "border-red-400/50 text-red-300 hover:bg-red-500/10"
+                ? "bg-red-600 hover:bg-red-700 text-white" 
+                : "border-gray-600 text-gray-300 hover:bg-gray-700"
               }
             >
-              USD
+              Total USD
             </Button>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-red-200 font-medium">{t('quantity')}</Label>
+            <Label className="text-gray-200 font-medium">
+              {sellMode === 'tokens' ? 'Quantité' : 'Montant Total'}
+            </Label>
             {sellMode === 'tokens' ? (
               <Input
                 type="number"
-                placeholder={t('amountInTokens')}
+                placeholder="Nombre de tokens"
                 value={sellAmount}
                 onChange={(e) => handleSellAmountChange(e.target.value, 'tokens')}
-                className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                 max={maxSellAmount}
               />
             ) : (
               <Input
                 type="number"
-                placeholder={t('amountInDollars')}
+                placeholder="Montant en dollars"
                 value={sellDollarAmount}
                 onChange={(e) => handleSellAmountChange(e.target.value, 'dollars')}
-                className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
                 max={maxSellAmount * cryptoData.current_price}
               />
             )}
-            <p className="text-xs text-red-300">
-              {t('position')}: {maxSellAmount.toLocaleString()} tokens
+            <p className="text-xs text-gray-400">
+              Position: {maxSellAmount.toLocaleString()} tokens
             </p>
           </div>
 
           {currentPosition && (
-            <div className="p-3 bg-gradient-to-br from-red-800/40 to-rose-800/40 rounded-lg border border-red-500/40 space-y-1">
-              <div className="flex justify-between text-red-200">
-                <span>{t('avgPurchasePrice')}:</span>
+            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 space-y-2">
+              <div className="flex justify-between text-gray-300">
+                <span>Prix d'achat moyen:</span>
                 <span className="text-white">${currentPosition.avgPrice.toFixed(8)}</span>
               </div>
-              <div className="flex justify-between text-red-200">
-                <span>{t('currentPrice')}:</span>
+              <div className="flex justify-between text-gray-300">
+                <span>Prix actuel:</span>
                 <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
               </div>
-              <div className="flex justify-between font-bold text-white">
+              <div className="flex justify-between font-bold text-white border-t border-gray-600 pt-2">
                 <span>P&L:</span>
                 <span className={
                   (cryptoData.current_price - currentPosition.avgPrice) >= 0 
-                    ? "text-green-300" 
-                    : "text-red-300"
+                    ? "text-green-400" 
+                    : "text-red-400"
                 }>
                   {((cryptoData.current_price - currentPosition.avgPrice) / currentPosition.avgPrice * 100).toFixed(2)}%
                 </span>
@@ -266,10 +266,10 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           )}
 
           {(sellAmount || sellDollarAmount) && (
-            <div className="p-3 bg-gradient-to-br from-red-800/40 to-rose-800/40 rounded-lg border border-red-500/40">
+            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600">
               <div className="flex justify-between font-bold text-white">
-                <span>{t('saleTotal')}:</span>
-                <span className="text-red-300">
+                <span>Total de vente:</span>
+                <span className="text-red-400">
                   ${sellDollarAmount || (parseFloat(sellAmount || '0') * cryptoData.current_price).toFixed(2)}
                 </span>
               </div>
@@ -279,10 +279,10 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           <Button 
             onClick={handleSell}
             disabled={!sellAmount || parseFloat(sellAmount) <= 0 || parseFloat(sellAmount) > maxSellAmount || !currentPosition}
-            className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-lg shadow-red-500/20"
+            className="w-full bg-red-600 hover:bg-red-700 text-white"
           >
             <DollarSign className="h-4 w-4 mr-2" />
-            {t('sell')}
+            Vendre
           </Button>
         </CardContent>
       </Card>
