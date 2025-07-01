@@ -28,6 +28,25 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { data, error };
+  };
+
+  const signUp = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { data, error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/auth';
@@ -37,6 +56,8 @@ export const useAuth = () => {
     user,
     session,
     loading,
+    signIn,
+    signUp,
     signOut
   };
 };

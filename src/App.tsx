@@ -13,7 +13,7 @@ import { useAuth } from "./hooks/useAuth";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
