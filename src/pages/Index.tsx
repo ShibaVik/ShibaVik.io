@@ -101,9 +101,9 @@ const Index = () => {
     }
   }, [user]);
 
-  // Auto-refresh prices every 30 seconds
+  // Auto-refresh prices every 30 seconds for memecoins
   useEffect(() => {
-    if (cryptoData) {
+    if (cryptoData && cryptoData.contract_address) {
       const interval = setInterval(refreshPrice, 30000);
       return () => clearInterval(interval);
     }

@@ -51,10 +51,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
   return (
     <div className="space-y-6">
       {/* Portfolio Summary - Improved colors */}
-      <Card className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border-indigo-500/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border-purple-500/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-white">
-            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg">
               <Wallet className="h-5 w-5 text-white" />
             </div>
             <span>{t('portfolioSummary')}</span>
@@ -62,33 +62,39 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
-              <p className="text-sm text-indigo-200">{t('totalValue')}</p>
-              <p className="text-xl font-bold text-indigo-300">
+            <div className="p-3 bg-gradient-to-br from-cyan-800/40 to-blue-800/40 rounded-lg border border-cyan-500/40">
+              <p className="text-sm text-cyan-200">{t('totalValue')}</p>
+              <p className="text-xl font-bold text-cyan-300">
                 ${totalValue.toFixed(2)}
               </p>
             </div>
-            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
-              <p className="text-sm text-indigo-200">{t('totalCost')}</p>
+            <div className="p-3 bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-lg border border-gray-500/40">
+              <p className="text-sm text-gray-200">{t('totalCost')}</p>
               <p className="text-xl font-bold text-white">
                 ${totalCost.toFixed(2)}
               </p>
             </div>
-            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
-              <p className="text-sm text-indigo-200">{t('totalPnL')}</p>
-              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className={`p-3 rounded-lg border ${totalPnL >= 0 
+              ? 'bg-gradient-to-br from-green-800/40 to-emerald-800/40 border-green-500/40' 
+              : 'bg-gradient-to-br from-red-800/40 to-rose-800/40 border-red-500/40'
+            }`}>
+              <p className={`text-sm ${totalPnL >= 0 ? 'text-green-200' : 'text-red-200'}`}>{t('totalPnL')}</p>
+              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                 {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
               </p>
             </div>
-            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
-              <p className="text-sm text-indigo-200">P&L %</p>
+            <div className={`p-3 rounded-lg border ${totalPnLPercentage >= 0 
+              ? 'bg-gradient-to-br from-green-800/40 to-emerald-800/40 border-green-500/40' 
+              : 'bg-gradient-to-br from-red-800/40 to-rose-800/40 border-red-500/40'
+            }`}>
+              <p className={`text-sm ${totalPnLPercentage >= 0 ? 'text-green-200' : 'text-red-200'}`}>P&L %</p>
               <div className="flex items-center space-x-1">
                 {totalPnLPercentage >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
+                  <TrendingUp className="h-4 w-4 text-green-300" />
                 ) : (
-                  <TrendingDown className="h-4 w-4 text-red-400" />
+                  <TrendingDown className="h-4 w-4 text-red-300" />
                 )}
-                <p className={`text-xl font-bold ${totalPnLPercentage >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <p className={`text-xl font-bold ${totalPnLPercentage >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                   {totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%
                 </p>
               </div>
@@ -119,7 +125,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
                     <Badge 
                       variant={positionPnL >= 0 ? "default" : "destructive"}
                       className={positionPnL >= 0 
-                        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white" 
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" 
                         : "bg-gradient-to-r from-red-500 to-rose-600 text-white"
                       }
                     >
@@ -138,24 +144,24 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                  <div className="p-2 bg-gray-700/50 rounded border border-gray-600/50">
-                    <p className="text-gray-300">{t('avgPurchasePrice')}</p>
-                    <p className="font-semibold text-white">${position.avgPrice.toFixed(8)}</p>
+                  <div className="p-2 bg-gradient-to-br from-blue-800/40 to-indigo-800/40 rounded border border-blue-500/40">
+                    <p className="text-blue-200">{t('avgPurchasePrice')}</p>
+                    <p className="font-semibold text-blue-300">${position.avgPrice.toFixed(8)}</p>
                   </div>
-                  <div className="p-2 bg-gray-700/50 rounded border border-gray-600/50">
-                    <p className="text-gray-300">{t('currentPrice')}</p>
-                    <p className="font-semibold text-white">${position.currentPrice.toFixed(8)}</p>
+                  <div className="p-2 bg-gradient-to-br from-purple-800/40 to-pink-800/40 rounded border border-purple-500/40">
+                    <p className="text-purple-200">{t('currentPrice')}</p>
+                    <p className="font-semibold text-purple-300">${position.currentPrice.toFixed(8)}</p>
                   </div>
-                  <div className="p-2 bg-blue-900/30 rounded border border-blue-500/30">
-                    <p className="text-blue-200">Valeur</p>
-                    <p className="font-semibold text-blue-300">${positionValue.toFixed(2)}</p>
+                  <div className="p-2 bg-gradient-to-br from-cyan-800/40 to-teal-800/40 rounded border border-cyan-500/40">
+                    <p className="text-cyan-200">Valeur</p>
+                    <p className="font-semibold text-cyan-300">${positionValue.toFixed(2)}</p>
                   </div>
                   <div className={`p-2 rounded border ${positionPnL >= 0 
-                    ? 'bg-emerald-900/30 border-emerald-500/30' 
-                    : 'bg-red-900/30 border-red-500/30'
+                    ? 'bg-gradient-to-br from-green-800/40 to-emerald-800/40 border-green-500/40' 
+                    : 'bg-gradient-to-br from-red-800/40 to-rose-800/40 border-red-500/40'
                   }`}>
-                    <p className={positionPnL >= 0 ? 'text-emerald-200' : 'text-red-200'}>P&L</p>
-                    <p className={`font-semibold ${positionPnL >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                    <p className={positionPnL >= 0 ? 'text-green-200' : 'text-red-200'}>P&L</p>
+                    <p className={`font-semibold ${positionPnL >= 0 ? 'text-green-300' : 'text-red-300'}`}>
                       {positionPnL >= 0 ? '+' : ''}${positionPnL.toFixed(2)}
                     </p>
                   </div>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Star } from 'lucide-react';
@@ -20,9 +20,7 @@ interface PopularCryptosProps {
 
 const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
   const { t } = useLanguage();
-
-  // Static data for popular cryptos - in a real app, this would come from an API
-  const popularCryptos: PopularCrypto[] = [
+  const [cryptos, setCryptos] = useState<PopularCrypto[]>([
     {
       id: 'bitcoin',
       symbol: 'BTC',
@@ -44,7 +42,41 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
       current_price: 178.90,
       price_change_percentage_24h: 4.7,
     },
-  ];
+  ]);
+
+  // Fetch real-time prices from CoinGecko API
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true'
+        );
+        const data = await response.json();
+        
+        setCryptos(prev => prev.map(crypto => {
+          let apiKey = '';
+          if (crypto.id === 'bitcoin') apiKey = 'bitcoin';
+          else if (crypto.id === 'ethereum') apiKey = 'ethereum';
+          else if (crypto.id === 'solana') apiKey = 'solana';
+          
+          if (data[apiKey]) {
+            return {
+              ...crypto,
+              current_price: data[apiKey].usd,
+              price_change_percentage_24h: data[apiKey].usd_24h_change || 0
+            };
+          }
+          return crypto;
+        }));
+      } catch (error) {
+        console.error('Erreur lors de la récupération des prix:', error);
+      }
+    };
+
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Card className="bg-gradient-to-br from-orange-900/20 to-yellow-900/20 border-orange-500/50 backdrop-blur-sm">
@@ -59,7 +91,7 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {popularCryptos.map((crypto) => (
+          {cryptos.map((crypto) => (
             <div
               key={crypto.id}
               className="p-4 bg-gradient-to-br from-gray-700/50 to-gray-800/50 rounded-xl border border-gray-600/50 hover:border-orange-400/50 transition-all duration-200 cursor-pointer group"

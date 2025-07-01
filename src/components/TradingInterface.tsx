@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,10 +89,10 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
       {/* Buy Section - Improved colors */}
-      <Card className="bg-gradient-to-br from-emerald-900/40 to-green-900/40 border-emerald-500/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 border-green-500/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-emerald-300">
-            <div className="p-2 bg-gradient-to-r from-emerald-500 to-green-600 rounded-lg">
+          <CardTitle className="flex items-center space-x-2 text-white">
+            <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
             <span>{t('buy')} {cryptoData.symbol}</span>
@@ -104,8 +105,8 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
               size="sm"
               onClick={() => setBuyMode('tokens')}
               className={buyMode === 'tokens' 
-                ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white" 
-                : "border-emerald-400/50 text-emerald-300 hover:bg-emerald-500/10"
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" 
+                : "border-green-400/50 text-green-300 hover:bg-green-500/10"
               }
             >
               Tokens
@@ -115,8 +116,8 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
               size="sm"
               onClick={() => setBuyMode('dollars')}
               className={buyMode === 'dollars' 
-                ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white" 
-                : "border-emerald-400/50 text-emerald-300 hover:bg-emerald-500/10"
+                ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white" 
+                : "border-green-400/50 text-green-300 hover:bg-green-500/10"
               }
             >
               USD
@@ -124,7 +125,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-emerald-200 font-medium">{t('quantity')}</Label>
+            <Label className="text-green-200 font-medium">{t('quantity')}</Label>
             {buyMode === 'tokens' ? (
               <Input
                 type="number"
@@ -144,24 +145,24 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
                 max={balance}
               />
             )}
-            <p className="text-xs text-emerald-300">
+            <p className="text-xs text-green-300">
               {t('maximum')}: {maxBuyAmount.toLocaleString()} tokens (${balance.toFixed(2)})
             </p>
           </div>
 
           {(buyAmount || buyDollarAmount) && (
-            <div className="p-3 bg-emerald-900/30 rounded-lg border border-emerald-500/30 space-y-1">
-              <div className="flex justify-between text-emerald-200">
+            <div className="p-3 bg-gradient-to-br from-green-800/40 to-emerald-800/40 rounded-lg border border-green-500/40 space-y-1">
+              <div className="flex justify-between text-green-200">
                 <span>{t('unitPrice')}:</span>
-                <span>${cryptoData.current_price.toFixed(8)}</span>
+                <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
               </div>
-              <div className="flex justify-between text-emerald-200">
+              <div className="flex justify-between text-green-200">
                 <span>{t('quantity')}:</span>
-                <span>{parseFloat(buyAmount || '0').toLocaleString()}</span>
+                <span className="text-white">{parseFloat(buyAmount || '0').toLocaleString()}</span>
               </div>
               <div className="flex justify-between font-bold text-white">
                 <span>{t('total')}:</span>
-                <span className="text-emerald-300">
+                <span className="text-green-300">
                   ${buyDollarAmount || (parseFloat(buyAmount || '0') * cryptoData.current_price).toFixed(2)}
                 </span>
               </div>
@@ -171,7 +172,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           <Button 
             onClick={handleBuy}
             disabled={!buyAmount || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > maxBuyAmount}
-            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white shadow-lg shadow-emerald-500/20"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20"
           >
             <DollarSign className="h-4 w-4 mr-2" />
             {t('buy')}
@@ -180,9 +181,9 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
       </Card>
 
       {/* Sell Section - Improved colors */}
-      <Card className="bg-gradient-to-br from-red-900/40 to-rose-900/40 border-red-500/50 backdrop-blur-sm">
+      <Card className="bg-gradient-to-br from-red-900/30 to-rose-900/30 border-red-500/50 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-red-300">
+          <CardTitle className="flex items-center space-x-2 text-white">
             <div className="p-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-lg">
               <TrendingDown className="h-5 w-5 text-white" />
             </div>
@@ -242,21 +243,21 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           </div>
 
           {currentPosition && (
-            <div className="p-3 bg-red-900/30 rounded-lg border border-red-500/30 space-y-1">
+            <div className="p-3 bg-gradient-to-br from-red-800/40 to-rose-800/40 rounded-lg border border-red-500/40 space-y-1">
               <div className="flex justify-between text-red-200">
                 <span>{t('avgPurchasePrice')}:</span>
-                <span>${currentPosition.avgPrice.toFixed(8)}</span>
+                <span className="text-white">${currentPosition.avgPrice.toFixed(8)}</span>
               </div>
               <div className="flex justify-between text-red-200">
                 <span>{t('currentPrice')}:</span>
-                <span>${cryptoData.current_price.toFixed(8)}</span>
+                <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
               </div>
               <div className="flex justify-between font-bold text-white">
                 <span>P&L:</span>
                 <span className={
                   (cryptoData.current_price - currentPosition.avgPrice) >= 0 
-                    ? "text-emerald-400" 
-                    : "text-red-400"
+                    ? "text-green-300" 
+                    : "text-red-300"
                 }>
                   {((cryptoData.current_price - currentPosition.avgPrice) / currentPosition.avgPrice * 100).toFixed(2)}%
                 </span>
@@ -265,7 +266,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           )}
 
           {(sellAmount || sellDollarAmount) && (
-            <div className="p-3 bg-red-900/30 rounded-lg border border-red-500/30">
+            <div className="p-3 bg-gradient-to-br from-red-800/40 to-rose-800/40 rounded-lg border border-red-500/40">
               <div className="flex justify-between font-bold text-white">
                 <span>{t('saleTotal')}:</span>
                 <span className="text-red-300">
