@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Globe } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Globe, Settings as SettingsIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
 import TransactionHistory from '@/components/TransactionHistory';
+import Settings from '@/components/Settings';
+import PopularCryptos from '@/components/PopularCryptos';
 import Footer from '@/components/Footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/hooks/useAuth';
@@ -423,9 +424,28 @@ const Index = () => {
       symbol: crypto.symbol,
       name: crypto.name,
       current_price: crypto.current_price,
-      price_change_percentage_24h: 0, // We don't have this data from portfolio
+      price_change_percentage_24h: 0,
     });
     setActiveTab('trade');
+  };
+
+  const handleSelectPopularCrypto = (crypto: any) => {
+    setCryptoData({
+      id: crypto.id,
+      symbol: crypto.symbol,
+      name: crypto.name,
+      current_price: crypto.current_price,
+      price_change_percentage_24h: crypto.price_change_percentage_24h,
+    });
+    setActiveTab('trade');
+  };
+
+  const handleDemoBalanceChange = (newBalance: number) => {
+    setDemoBalance(newBalance);
+    toast({
+      title: "Solde mis à jour",
+      description: `Nouveau solde démo: $${newBalance.toLocaleString()}`
+    });
   };
 
   return (
@@ -438,28 +458,28 @@ const Index = () => {
         <div className="absolute bottom-20 right-40 w-3 h-3 border border-green-400 rotate-12 animate-pulse delay-700"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-8 p-4 relative z-10">
-        {/* Header with Auth and Language Selector */}
-        <div className="flex justify-between items-center bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50">
-          <div className="text-center space-y-3">
-            <div className="flex items-center space-x-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8 p-2 sm:p-4 relative z-10">
+        {/* Header - Responsive */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-gray-700/50 space-y-4 lg:space-y-0">
+          <div className="text-center lg:text-left space-y-3 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">S</span>
+                <div className="w-10 sm:w-12 h-10 sm:h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-lg sm:text-xl">S</span>
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
+                  <h1 className="text-2xl sm:text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
                     {t('title')}
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <p className="text-gray-300 text-sm">{t('subtitle')}</p>
+                    <p className="text-gray-300 text-xs sm:text-sm">{t('subtitle')}</p>
                   </div>
                 </div>
               </div>
               
-              {/* Social Links */}
-              <div className="flex items-center space-x-2">
+              {/* Social Links - Hidden on mobile */}
+              <div className="hidden sm:flex items-center space-x-2">
                 {socialLinks.map((link) => (
                   <a
                     key={link.name}
@@ -490,7 +510,7 @@ const Index = () => {
             </div>
             
             <div className="space-y-1">
-              <p className="text-cyan-400 text-sm font-medium">
+              <p className="text-cyan-400 text-xs sm:text-sm font-medium">
                 {t('compatible')}
               </p>
               <p className="text-gray-400 text-xs italic">
@@ -499,26 +519,14 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            {/* Language Selector */}
-            <Select value={language} onValueChange={setLanguage}>
-              <SelectTrigger className="w-24 bg-gray-700/50 border-gray-600/50 text-gray-100">
-                <Globe className="h-4 w-4 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                <SelectItem value="fr" className="text-gray-100 hover:bg-gray-700">🇫🇷 FR</SelectItem>
-                <SelectItem value="en" className="text-gray-100 hover:bg-gray-700">🇺🇸 EN</SelectItem>
-              </SelectContent>
-            </Select>
-
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full lg:w-auto">
             {user ? (
               <>
-                <div className="flex items-center space-x-3 bg-gray-700/50 rounded-xl px-4 py-2 border border-gray-600/50">
-                  <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
-                    <User className="h-4 w-4 text-white" />
+                <div className="flex items-center space-x-3 bg-gray-700/50 rounded-xl px-3 sm:px-4 py-2 border border-gray-600/50">
+                  <div className="w-6 sm:w-8 h-6 sm:h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
+                    <User className="h-3 sm:h-4 w-3 sm:w-4 text-white" />
                   </div>
-                  <span className="text-gray-100 font-medium">{user.email}</span>
+                  <span className="text-gray-100 font-medium text-sm sm:text-base truncate">{user.email}</span>
                 </div>
                 <Button 
                   onClick={signOut}
@@ -527,17 +535,18 @@ const Index = () => {
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  {t('signOut')}
+                  <span className="hidden sm:inline">{t('signOut')}</span>
+                  <span className="sm:hidden">Exit</span>
                 </Button>
               </>
             ) : (
               <Button 
                 onClick={() => navigate('/auth')}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20 transition-all duration-200"
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20 transition-all duration-200 w-full sm:w-auto"
                 size="sm"
               >
                 <LogIn className="h-4 w-4 mr-2" />
-                Se connecter / S'inscrire
+                Se connecter
               </Button>
             )}
           </div>
@@ -545,11 +554,11 @@ const Index = () => {
 
         {/* Info message for demo mode */}
         {!user && (
-          <Card className="bg-gray-800/60 border-cyan-500/30 backdrop-blur-sm">
-            <CardContent className="p-6">
+          <Card className="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border-cyan-400/50 backdrop-blur-sm">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-center space-x-3">
                 <span className="text-2xl">💡</span>
-                <p className="text-cyan-100 text-center font-medium">
+                <p className="text-cyan-100 text-center font-medium text-sm sm:text-base">
                   {t('demoMode')}
                 </p>
               </div>
@@ -557,27 +566,27 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Balance Card */}
-        <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        {/* Balance Card - Improved colors */}
+        <Card className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border-emerald-500/50 backdrop-blur-sm">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4">
-                <div className="p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl shadow-lg shadow-green-500/20">
-                  <Wallet className="h-8 w-8 text-white" />
+                <div className="p-3 sm:p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl shadow-lg shadow-emerald-500/30">
+                  <Wallet className="h-6 sm:h-8 w-6 sm:w-8 text-white" />
                 </div>
                 <div>
-                  <p className="text-gray-300 text-sm font-medium">
+                  <p className="text-emerald-200 text-sm font-medium">
                     {user ? t('currentBalance') : t('demoBalance')}
                   </p>
-                  <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text">
+                  <p className="text-2xl sm:text-3xl font-bold text-transparent bg-gradient-to-r from-emerald-300 to-green-400 bg-clip-text">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               {user && (
-                <div className="text-right bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
-                  <p className="text-blue-300 text-sm font-medium">{t('initialBalance')}</p>
-                  <p className="text-xl font-bold text-blue-400">
+                <div className="text-left sm:text-right bg-blue-900/30 rounded-xl p-3 sm:p-4 border border-blue-400/40">
+                  <p className="text-blue-200 text-sm font-medium">{t('initialBalance')}</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-300">
                     ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
                   </p>
                 </div>
@@ -586,18 +595,21 @@ const Index = () => {
           </CardContent>
         </Card>
 
+        {/* Popular Cryptos */}
+        <PopularCryptos onSelectCrypto={handleSelectPopularCrypto} />
+
         {/* Search Section */}
-        <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
+        <Card className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border-purple-500/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center space-x-3 text-gray-100">
-              <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg">
                 <Search className="h-5 w-5 text-white" />
               </div>
               <span>{t('searchCrypto')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
               <Input
                 placeholder={t('contractAddress')}
                 value={searchAddress}
@@ -607,7 +619,7 @@ const Index = () => {
               <Button 
                 onClick={searchCrypto} 
                 disabled={loading}
-                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20"
+                className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 border-0 shadow-lg shadow-purple-500/20 w-full sm:w-auto"
               >
                 {loading ? "..." : t('search')}
               </Button>
@@ -652,10 +664,14 @@ const Index = () => {
 
         {/* Trading Interface */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
-            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('trading')}</TabsTrigger>
-            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('portfolio')}</TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('history')}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
+            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('trading')}</TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('portfolio')}</TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white text-xs sm:text-sm">{t('history')}</TabsTrigger>
+            <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white text-xs sm:text-sm">
+              <SettingsIcon className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Paramètres</span>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="trade">
@@ -691,6 +707,14 @@ const Index = () => {
           
           <TabsContent value="history">
             <TransactionHistory transactions={transactions} />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Settings 
+              demoBalance={demoBalance}
+              onDemoBalanceChange={handleDemoBalanceChange}
+              isDemo={!user}
+            />
           </TabsContent>
         </Tabs>
 

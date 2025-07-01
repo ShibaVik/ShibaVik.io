@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Wallet, ShoppingCart, TrendingDown as SellIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Position {
@@ -38,11 +38,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
 
   if (positions.length === 0) {
     return (
-      <Card className="bg-gray-800/50 border-gray-700">
+      <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-600/50">
         <CardContent className="p-8 text-center">
           <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-400">{t('noPositions')}</p>
-          <p className="text-sm text-gray-500">{t('startTrading')}</p>
+          <p className="text-gray-300">{t('noPositions')}</p>
+          <p className="text-sm text-gray-400">{t('startTrading')}</p>
         </CardContent>
       </Card>
     );
@@ -50,43 +50,45 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
 
   return (
     <div className="space-y-6">
-      {/* Portfolio Summary */}
-      <Card className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-700/50">
+      {/* Portfolio Summary - Improved colors */}
+      <Card className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border-indigo-500/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-white">
-            <Wallet className="h-5 w-5" />
+            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
+              <Wallet className="h-5 w-5 text-white" />
+            </div>
             <span>{t('portfolioSummary')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-gray-400">{t('totalValue')}</p>
-              <p className="text-xl font-bold text-blue-400">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
+              <p className="text-sm text-indigo-200">{t('totalValue')}</p>
+              <p className="text-xl font-bold text-indigo-300">
                 ${totalValue.toFixed(2)}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-400">{t('totalCost')}</p>
+            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
+              <p className="text-sm text-indigo-200">{t('totalCost')}</p>
               <p className="text-xl font-bold text-white">
                 ${totalCost.toFixed(2)}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-400">{t('totalPnL')}</p>
-              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
+              <p className="text-sm text-indigo-200">{t('totalPnL')}</p>
+              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-400">P&L %</p>
+            <div className="p-3 bg-indigo-900/30 rounded-lg border border-indigo-500/30">
+              <p className="text-sm text-indigo-200">P&L %</p>
               <div className="flex items-center space-x-1">
                 {totalPnLPercentage >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-400" />
+                  <TrendingUp className="h-4 w-4 text-emerald-400" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-red-400" />
                 )}
-                <p className={`text-xl font-bold ${totalPnLPercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <p className={`text-xl font-bold ${totalPnLPercentage >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {totalPnLPercentage >= 0 ? '+' : ''}{totalPnLPercentage.toFixed(2)}%
                 </p>
               </div>
@@ -95,7 +97,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
         </CardContent>
       </Card>
 
-      {/* Individual Positions */}
+      {/* Individual Positions - Better colors and mobile responsive */}
       <div className="grid gap-4">
         {positions.map((position, index) => {
           const positionValue = position.amount * position.currentPrice;
@@ -104,9 +106,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
           const positionPnLPercentage = (positionPnL / positionCost) * 100;
 
           return (
-            <Card key={index} className="bg-gray-800/50 border-gray-700 hover:border-cyan-400/50 transition-colors cursor-pointer">
+            <Card key={index} className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 border-gray-600/50 hover:border-cyan-400/50 transition-all duration-200 cursor-pointer backdrop-blur-sm">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 space-y-2 sm:space-y-0">
                   <div>
                     <h3 className="text-lg font-bold text-white">{position.crypto}</h3>
                     <p className="text-sm text-gray-300">
@@ -116,7 +118,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
                   <div className="flex items-center space-x-2">
                     <Badge 
                       variant={positionPnL >= 0 ? "default" : "destructive"}
-                      className={positionPnL >= 0 ? "bg-green-600" : "bg-red-600"}
+                      className={positionPnL >= 0 
+                        ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white" 
+                        : "bg-gradient-to-r from-red-500 to-rose-600 text-white"
+                      }
                     >
                       {positionPnL >= 0 ? '+' : ''}{positionPnLPercentage.toFixed(2)}%
                     </Badge>
@@ -124,7 +129,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
                       <Button
                         size="sm"
                         onClick={() => handlePositionClick(position)}
-                        className="bg-cyan-600 hover:bg-cyan-700 text-white"
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/20"
                       >
                         <ShoppingCart className="h-4 w-4" />
                       </Button>
@@ -132,22 +137,25 @@ const Portfolio: React.FC<PortfolioProps> = ({ positions, onSelectCrypto }) => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  <div>
-                    <p className="text-gray-400">{t('avgPurchasePrice')}</p>
-                    <p className="font-semibold text-gray-200">${position.avgPrice.toFixed(8)}</p>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                  <div className="p-2 bg-gray-700/50 rounded border border-gray-600/50">
+                    <p className="text-gray-300">{t('avgPurchasePrice')}</p>
+                    <p className="font-semibold text-white">${position.avgPrice.toFixed(8)}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400">{t('currentPrice')}</p>
-                    <p className="font-semibold text-gray-200">${position.currentPrice.toFixed(8)}</p>
+                  <div className="p-2 bg-gray-700/50 rounded border border-gray-600/50">
+                    <p className="text-gray-300">{t('currentPrice')}</p>
+                    <p className="font-semibold text-white">${position.currentPrice.toFixed(8)}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400">Valeur</p>
-                    <p className="font-semibold text-blue-400">${positionValue.toFixed(2)}</p>
+                  <div className="p-2 bg-blue-900/30 rounded border border-blue-500/30">
+                    <p className="text-blue-200">Valeur</p>
+                    <p className="font-semibold text-blue-300">${positionValue.toFixed(2)}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-400">P&L</p>
-                    <p className={`font-semibold ${positionPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className={`p-2 rounded border ${positionPnL >= 0 
+                    ? 'bg-emerald-900/30 border-emerald-500/30' 
+                    : 'bg-red-900/30 border-red-500/30'
+                  }`}>
+                    <p className={positionPnL >= 0 ? 'text-emerald-200' : 'text-red-200'}>P&L</p>
+                    <p className={`font-semibold ${positionPnL >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
                       {positionPnL >= 0 ? '+' : ''}${positionPnL.toFixed(2)}
                     </p>
                   </div>
