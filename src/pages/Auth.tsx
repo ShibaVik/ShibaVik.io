@@ -4,285 +4,185 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Rocket, ArrowLeft, Mail } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LogIn, UserPlus, Globe } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Auth = () => {
+  const { signIn, signUp } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [initialBalance, setInitialBalance] = useState(10000);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showEmailVerification, setShowEmailVerification] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            initial_balance: initialBalance
-          }
+      if (isSignUp) {
+        if (password !== confirmPassword) {
+          toast({
+            title: t('error'),
+            description: "Les mots de passe ne correspondent pas",
+            variant: "destructive"
+          });
+          return;
         }
-      });
-
-      if (error) throw error;
-
-      setShowEmailVerification(true);
-      toast({
-        title: "Compte créé !",
-        description: "Vérifiez votre email pour confirmer votre compte avant de vous connecter."
-      });
+        
+        const { error } = await signUp(email, password);
+        if (error) throw error;
+        
+        toast({
+          title: t('success'),
+          description: "Compte créé avec succès!"
+        });
+        navigate('/');
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) throw error;
+        
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
-        title: "Erreur lors de l'inscription",
-        description: error.message,
+        title: t('error'),
+        description: error.message || "Une erreur est survenue",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Connexion réussie !",
-        description: "Bienvenue sur ShibaVik.io"
-      });
-
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Erreur de connexion",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (showEmailVerification) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center space-x-2">
-              <Rocket className="h-8 w-8 text-green-400" />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-                ShibaVik.io
-              </h1>
-            </div>
-          </div>
-
-          <Card className="bg-gray-800/50 border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center space-x-2">
-                <Mail className="h-5 w-5 text-green-400" />
-                <span>Vérifiez votre email</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <div className="p-4 bg-green-900/20 border border-green-500/50 rounded-lg">
-                <p className="text-green-200 mb-2">
-                  Un email de confirmation a été envoyé à :
-                </p>
-                <p className="font-semibold text-green-400">{email}</p>
-              </div>
-              
-              <div className="space-y-2 text-sm text-gray-300">
-                <p>📧 Cliquez sur le lien dans l'email pour activer votre compte</p>
-                <p>🔒 Une fois confirmé, vous pourrez vous connecter</p>
-                <p className="text-yellow-400">
-                  ⚠️ N'oubliez pas de vérifier vos spams !
-                </p>
-              </div>
-
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={() => setShowEmailVerification(false)}
-                  variant="outline"
-                  className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
-                >
-                  Retour
-                </Button>
-                <Button 
-                  onClick={() => navigate('/')}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  Continuer en mode démo
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <Button
-            onClick={() => navigate('/')}
-            variant="ghost"
-            size="sm"
-            className="text-gray-400 hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour
-          </Button>
+        {/* Language Selector */}
+        <div className="flex justify-center">
+          <Select value={language} onValueChange={setLanguage}>
+            <SelectTrigger className="w-32 bg-gray-700/50 border-gray-600/50 text-gray-100">
+              <Globe className="h-4 w-4 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="fr" className="text-gray-100 hover:bg-gray-700">🇫🇷 FR</SelectItem>
+              <SelectItem value="en" className="text-gray-100 hover:bg-gray-700">🇺🇸 EN</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center space-x-2">
-            <Rocket className="h-8 w-8 text-green-400" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+        {/* Header */}
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
+              <span className="text-white font-bold text-xl">S</span>
+            </div>
+            <h1 className="text-3xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
               ShibaVik.io
             </h1>
           </div>
-          <p className="text-gray-400">Simulateur de trading de MemeCoin</p>
+          <p className="text-gray-300">{t('welcome')}</p>
         </div>
 
-        <Card className="bg-gray-800/50 border-gray-700">
+        {/* Auth Form */}
+        <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-center text-white">
-              Accédez à votre compte
+              {isSignUp ? t('signUp') : t('signIn')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="space-y-4">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-700">
-                <TabsTrigger value="signin">Connexion</TabsTrigger>
-                <TabsTrigger value="signup">Inscription</TabsTrigger>
-              </TabsList>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-200">{t('email')}</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-200">{t('password')}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                  required
+                />
+              </div>
 
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Mot de passe</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-blue-600 hover:bg-blue-700" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Connexion...
-                      </>
-                    ) : (
-                      'Se connecter'
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-gray-200">{t('confirmPassword')}</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400"
+                    required
+                  />
+                </div>
+              )}
 
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Mot de passe</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="initial-balance">Solde initial (USD)</Label>
-                    <Input
-                      id="initial-balance"
-                      type="number"
-                      value={initialBalance}
-                      onChange={(e) => setInitialBalance(Number(e.target.value))}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      min={1000}
-                      max={1000000}
-                      step={1000}
-                    />
-                    <p className="text-xs text-gray-400">
-                      Choisissez votre solde démo (entre 1 000 et 1 000 000 USD)
-                    </p>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-green-600 hover:bg-green-700" 
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Création...
-                      </>
-                    ) : (
-                      'Créer un compte'
-                    )}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
+              >
+                {loading ? "..." : (
+                  <>
+                    {isSignUp ? <UserPlus className="h-4 w-4 mr-2" /> : <LogIn className="h-4 w-4 mr-2" />}
+                    {isSignUp ? t('signUp') : t('signIn')}
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-gray-400 text-sm">
+                {isSignUp ? t('alreadyHaveAccount') : t('dontHaveAccount')}
+              </p>
+              <Button
+                variant="link"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-cyan-400 hover:text-cyan-300 p-0 h-auto font-normal"
+              >
+                {isSignUp ? t('signInHere') : t('signUpHere')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="text-center text-sm text-gray-400">
-          <p>💡 L'inscription permet de sauvegarder vos trades en permanence</p>
-          <p>✅ Vous pouvez aussi utiliser le mode démo sans inscription</p>
+        {/* Back to Home */}
+        <div className="text-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
+            className="border-gray-600 text-gray-300 hover:bg-gray-700/50"
+          >
+            Retour à l'accueil
+          </Button>
         </div>
       </div>
     </div>

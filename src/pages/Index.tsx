@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Twitter, Globe } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Search, DollarSign, LogOut, User, LogIn, Github, Linkedin, Globe } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import TradingInterface from '@/components/TradingInterface';
 import Portfolio from '@/components/Portfolio';
@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Select,
   SelectContent,
@@ -52,6 +53,7 @@ interface Position {
 const Index = () => {
   const { user, signOut } = useAuth();
   const { profile, updateBalance } = useProfile();
+  const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const [searchAddress, setSearchAddress] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData | null>(null);
@@ -59,63 +61,16 @@ const Index = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
   const [demoBalance, setDemoBalance] = useState(10000);
-  const [language, setLanguage] = useState('en'); // Changed default to English
+  const [activeTab, setActiveTab] = useState('trade');
   const { toast } = useToast();
 
   const balance = user ? (profile?.current_balance || 0) : demoBalance;
-
-  const translations = {
-    fr: {
-      title: "ShibaVik.io",
-      subtitle: "Simulateur de trading MemeCoin",
-      compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
-      developer: "Développé par ShibaVik Student - Cryptography Enthusiast",
-      demoMode: "Mode démo actif - Connectez-vous pour sauvegarder vos trades en permanence !",
-      currentBalance: "Solde Actuel",
-      demoBalance: "Solde Démo",
-      initialBalance: "Solde Initial",
-      searchCrypto: "Rechercher une MemeCoin",
-      contractAddress: "Adresse du contrat (Solana, Ethereum, BSC...)",
-      search: "Rechercher",
-      examples: "💡 Exemples d'adresses :",
-      priceUpdated: "⚡ Prix actualisé automatiquement",
-      trading: "Trading",
-      portfolio: "Portfolio",
-      history: "Historique",
-      searchToTrade: "Recherchez une crypto-monnaie pour commencer à trader",
-      signIn: "Se connecter / S'inscrire",
-      signOut: "Déconnexion"
-    },
-    en: {
-      title: "ShibaVik.io",
-      subtitle: "MemeCoin Trading Simulator",
-      compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
-      developer: "Developed by ShibaVik Student - Cryptography Enthusiast",
-      demoMode: "Demo mode active - Sign in to save your trades permanently!",
-      currentBalance: "Current Balance",
-      demoBalance: "Demo Balance",
-      initialBalance: "Initial Balance",
-      searchCrypto: "Search for a MemeCoin",
-      contractAddress: "Contract address (Solana, Ethereum, BSC...)",
-      search: "Search",
-      examples: "💡 Address examples:",
-      priceUpdated: "⚡ Price updated automatically",
-      trading: "Trading",
-      portfolio: "Portfolio",
-      history: "History",
-      searchToTrade: "Search for a cryptocurrency to start trading",
-      signIn: "Sign In / Sign Up",
-      signOut: "Sign Out"
-    }
-  };
-
-  const t = translations[language as keyof typeof translations];
 
   const socialLinks = [
     {
       name: 'Twitter',
       url: 'https://twitter.com/Nft_ShibaVik',
-      icon: null, // Changed to null to use custom 𝕏 symbol
+      icon: null,
       label: '𝕏'
     },
     {
@@ -138,16 +93,24 @@ const Index = () => {
     }
   ];
 
-  // Charger les données utilisateur depuis Supabase
+  // Load user data from Supabase
   useEffect(() => {
     if (user) {
       loadUserData();
     }
   }, [user]);
 
+  // Auto-refresh prices every 30 seconds
+  useEffect(() => {
+    if (cryptoData) {
+      const interval = setInterval(refreshPrice, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [cryptoData]);
+
   const loadUserData = async () => {
     try {
-      // Charger les transactions
+      // Load transactions
       const { data: transactionsData } = await supabase
         .from('transactions')
         .select('*')
@@ -167,7 +130,7 @@ const Index = () => {
         setTransactions(formattedTransactions);
       }
 
-      // Charger les positions
+      // Load positions
       const { data: positionsData } = await supabase
         .from('positions')
         .select('*')
@@ -190,7 +153,7 @@ const Index = () => {
   const searchCrypto = async () => {
     if (!searchAddress.trim()) {
       toast({
-        title: "Erreur",
+        title: t('error'),
         description: "Veuillez entrer une adresse de contrat",
         variant: "destructive"
       });
@@ -234,13 +197,16 @@ const Index = () => {
       });
 
       toast({
-        title: "Succès",
+        title: t('success'),
         description: `${tokenInfo.name} (${tokenInfo.symbol}) trouvé !`
       });
+
+      // Switch to trading tab
+      setActiveTab('trade');
     } catch (error) {
       console.error('Erreur lors de la recherche:', error);
       toast({
-        title: "Erreur",
+        title: t('error'),
         description: "Token non trouvé ou adresse invalide. Vérifiez que c'est une adresse valide sur Solana ou Ethereum.",
         variant: "destructive"
       });
@@ -283,44 +249,37 @@ const Index = () => {
     }
   };
 
-  useEffect(() => {
-    if (cryptoData) {
-      const interval = setInterval(refreshPrice, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [cryptoData]);
-
   const executeTrade = async (type: 'buy' | 'sell', amount: number) => {
     if (!cryptoData) return;
 
     const total = amount * cryptoData.current_price;
 
     if (!user) {
-      // Mode démo - pas de sauvegarde
+      // Demo mode
       if (type === 'buy') {
         if (total > demoBalance) {
           toast({
-            title: "Erreur",
-            description: "Solde insuffisant (mode démo)",
+            title: t('error'),
+            description: t('insufficientBalance') + " (mode démo)",
             variant: "destructive"
           });
           return;
         }
         setDemoBalance(prev => prev - total);
         toast({
-          title: "Achat réussi (mode démo)",
-          description: `Acheté ${amount} ${cryptoData.symbol} pour $${total.toFixed(2)}. Connectez-vous pour sauvegarder vos trades.`
+          title: t('buySuccess') + " (mode démo)",
+          description: `${t('bought')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}. Connectez-vous pour sauvegarder vos trades.`
         });
       }
       return;
     }
 
-    // Mode connecté - sauvegarde en base
+    // Connected mode - save to database
     if (type === 'buy') {
       if (total > balance) {
         toast({
-          title: "Erreur",
-          description: "Solde insuffisant",
+          title: t('error'),
+          description: t('insufficientBalance'),
           variant: "destructive"
         });
         return;
@@ -386,15 +345,15 @@ const Index = () => {
       }
 
       toast({
-        title: "Achat réussi",
-        description: `Acheté ${amount} ${cryptoData.symbol} pour $${total.toFixed(2)}`
+        title: t('buySuccess'),
+        description: `${t('bought')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}`
       });
     } else {
       const position = positions.find(p => p.crypto === cryptoData.symbol);
       if (!position || position.amount < amount) {
         toast({
-          title: "Erreur",
-          description: "Position insuffisante",
+          title: t('error'),
+          description: t('insufficientPosition'),
           variant: "destructive"
         });
         return;
@@ -440,8 +399,8 @@ const Index = () => {
       }
 
       toast({
-        title: "Vente réussie",
-        description: `Vendu ${amount} ${cryptoData.symbol} pour $${total.toFixed(2)}`
+        title: t('sellSuccess'),
+        description: `${t('sold')} ${amount} ${cryptoData.symbol} ${t('for')} $${total.toFixed(2)}`
       });
     }
 
@@ -456,6 +415,17 @@ const Index = () => {
     };
 
     setTransactions(prev => [newTransaction, ...prev]);
+  };
+
+  const handleSelectCryptoFromPortfolio = (crypto: { symbol: string; current_price: number; name: string; id: string }) => {
+    setCryptoData({
+      id: crypto.id,
+      symbol: crypto.symbol,
+      name: crypto.name,
+      current_price: crypto.current_price,
+      price_change_percentage_24h: 0, // We don't have this data from portfolio
+    });
+    setActiveTab('trade');
   };
 
   return (
@@ -479,11 +449,11 @@ const Index = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text">
-                    {t.title}
+                    {t('title')}
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <p className="text-gray-300 text-sm">{t.subtitle}</p>
+                    <p className="text-gray-300 text-sm">{t('subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -505,6 +475,10 @@ const Index = () => {
                       <span className="text-sm text-gray-300 group-hover:text-cyan-400 transition-colors duration-300 font-bold">
                         𝕏
                       </span>
+                    ) : link.name === 'OpenSea' ? (
+                      <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center group-hover:from-cyan-400 group-hover:to-blue-400 transition-all duration-300">
+                        <span className="text-white text-xs font-bold">OS</span>
+                      </div>
                     ) : (
                       <span className="text-sm group-hover:text-cyan-400 transition-colors duration-300">
                         🌊
@@ -517,10 +491,10 @@ const Index = () => {
             
             <div className="space-y-1">
               <p className="text-cyan-400 text-sm font-medium">
-                {t.compatible}
+                {t('compatible')}
               </p>
               <p className="text-gray-400 text-xs italic">
-                {t.developer}
+                {t('developer')}
               </p>
             </div>
           </div>
@@ -553,7 +527,7 @@ const Index = () => {
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-400 transition-all duration-200"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  {t.signOut}
+                  {t('signOut')}
                 </Button>
               </>
             ) : (
@@ -563,27 +537,27 @@ const Index = () => {
                 size="sm"
               >
                 <LogIn className="h-4 w-4 mr-2" />
-                {t.signIn}
+                Se connecter / S'inscrire
               </Button>
             )}
           </div>
         </div>
 
-        {/* Info message for demo mode - Enhanced visibility */}
+        {/* Info message for demo mode */}
         {!user && (
           <Card className="bg-gray-800/60 border-cyan-500/30 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-center space-x-3">
                 <span className="text-2xl">💡</span>
                 <p className="text-cyan-100 text-center font-medium">
-                  {t.demoMode}
+                  {t('demoMode')}
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Balance Card - Enhanced design */}
+        {/* Balance Card */}
         <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -593,7 +567,7 @@ const Index = () => {
                 </div>
                 <div>
                   <p className="text-gray-300 text-sm font-medium">
-                    {user ? t.currentBalance : t.demoBalance}
+                    {user ? t('currentBalance') : t('demoBalance')}
                   </p>
                   <p className="text-3xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text">
                     ${balance.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
@@ -602,7 +576,7 @@ const Index = () => {
               </div>
               {user && (
                 <div className="text-right bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
-                  <p className="text-blue-300 text-sm font-medium">{t.initialBalance}</p>
+                  <p className="text-blue-300 text-sm font-medium">{t('initialBalance')}</p>
                   <p className="text-xl font-bold text-blue-400">
                     ${profile?.initial_balance?.toLocaleString('fr-FR') || '0'}
                   </p>
@@ -612,20 +586,20 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* Search Section - Enhanced visibility */}
+        {/* Search Section */}
         <Card className="bg-gray-800/40 border-gray-700/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center space-x-3 text-gray-100">
               <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg">
                 <Search className="h-5 w-5 text-white" />
               </div>
-              <span>{t.searchCrypto}</span>
+              <span>{t('searchCrypto')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex space-x-3">
               <Input
-                placeholder={t.contractAddress}
+                placeholder={t('contractAddress')}
                 value={searchAddress}
                 onChange={(e) => setSearchAddress(e.target.value)}
                 className="bg-gray-700/50 border-gray-600/50 text-gray-100 placeholder-gray-400 flex-1 backdrop-blur-sm"
@@ -635,12 +609,12 @@ const Index = () => {
                 disabled={loading}
                 className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 border-0 shadow-lg shadow-cyan-500/20"
               >
-                {loading ? "..." : t.search}
+                {loading ? "..." : t('search')}
               </Button>
             </div>
             
             <div className="bg-gray-700/30 rounded-xl p-4 border border-gray-600/30">
-              <p className="text-cyan-400 font-medium mb-2">{t.examples}</p>
+              <p className="text-cyan-400 font-medium mb-2">{t('examples')}</p>
               <div className="space-y-1 text-sm text-gray-300">
                 <p>• <span className="text-purple-400">Solana:</span> 9BB6W7Q... (tokens pump.fun)</p>
                 <p>• <span className="text-blue-400">Ethereum:</span> 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984</p>
@@ -669,19 +643,19 @@ const Index = () => {
                   }
                 </p>
                 <p className="text-cyan-400 text-sm">
-                  {t.priceUpdated}
+                  {t('priceUpdated')}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Trading Interface - Enhanced tabs */}
-        <Tabs defaultValue="trade" className="space-y-6">
+        {/* Trading Interface */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 h-12">
-            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.trading}</TabsTrigger>
-            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.portfolio}</TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t.history}</TabsTrigger>
+            <TabsTrigger value="trade" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('trading')}</TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('portfolio')}</TabsTrigger>
+            <TabsTrigger value="history" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white">{t('history')}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="trade">
@@ -700,7 +674,7 @@ const Index = () => {
                       <Search className="h-8 w-8 text-white" />
                     </div>
                     <p className="text-gray-300 text-lg">
-                      {t.searchToTrade}
+                      {t('searchToTrade')}
                     </p>
                   </div>
                 </CardContent>
@@ -709,7 +683,10 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="portfolio">
-            <Portfolio positions={positions} />
+            <Portfolio 
+              positions={positions} 
+              onSelectCrypto={handleSelectCryptoFromPortfolio}
+            />
           </TabsContent>
           
           <TabsContent value="history">
