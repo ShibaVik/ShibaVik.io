@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
 import Footer from '@/components/Footer';
+
 interface CryptoData {
   id: string;
   symbol: string;
@@ -21,12 +22,14 @@ interface CryptoData {
   price_change_percentage_24h: number;
   contract_address?: string;
 }
+
 interface Position {
   crypto: string;
   amount: number;
   avgPrice: number;
   currentPrice: number;
 }
+
 interface Transaction {
   id: string;
   type: 'buy' | 'sell';
@@ -36,17 +39,11 @@ interface Transaction {
   total: number;
   timestamp: Date;
 }
+
 const Index = () => {
-  const {
-    t
-  } = useLanguage();
-  const {
-    toast
-  } = useToast();
-  const {
-    user,
-    signOut
-  } = useAuth();
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [balance, setBalance] = useState(10000);
   const [positions, setPositions] = useState<Position[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -56,45 +53,40 @@ const Index = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('trading');
+
   useEffect(() => {
-    // Calculate total portfolio value
     const portfolioValue = positions.reduce((sum, position) => {
       return sum + position.amount * position.currentPrice;
     }, 0);
     setTotalPortfolioValue(balance + portfolioValue);
   }, [balance, positions]);
+
   const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
+
   const handleTrade = (type: 'buy' | 'sell', amount: number) => {
     if (!selectedCrypto) return;
+    
     const crypto = selectedCrypto.symbol;
     const price = selectedCrypto.current_price;
     const cost = amount * price;
+    
     if (type === 'buy') {
       if (balance >= cost) {
-        // Update balance
         setBalance(balance - cost);
-
-        // Update positions
+        
         const existingPosition = positions.find(p => p.crypto === crypto);
         if (existingPosition) {
           const newAmount = existingPosition.amount + amount;
           const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + cost) / newAmount;
-          setPositions(positions.map(p => p.crypto === crypto ? {
-            ...p,
-            amount: newAmount,
-            avgPrice: newAvgPrice,
-            currentPrice: price
-          } : p));
+          setPositions(positions.map(p => 
+            p.crypto === crypto 
+              ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: price }
+              : p
+          ));
         } else {
-          setPositions([...positions, {
-            crypto,
-            amount,
-            avgPrice: price,
-            currentPrice: price
-          }]);
+          setPositions([...positions, { crypto, amount, avgPrice: price, currentPrice: price }]);
         }
-
-        // Add transaction
+        
         const transaction: Transaction = {
           id: Math.random().toString(36).substring(7),
           type: 'buy',
@@ -105,6 +97,7 @@ const Index = () => {
           timestamp: new Date()
         };
         setTransactions([...transactions, transaction]);
+        
         toast({
           title: t('buySuccess'),
           description: `${t('bought')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
@@ -119,22 +112,19 @@ const Index = () => {
     } else if (type === 'sell') {
       const existingPosition = positions.find(p => p.crypto === crypto);
       if (existingPosition && existingPosition.amount >= amount) {
-        // Update balance
         setBalance(balance + cost);
-
-        // Update positions
+        
         const newAmount = existingPosition.amount - amount;
         if (newAmount > 0) {
-          setPositions(positions.map(p => p.crypto === crypto ? {
-            ...p,
-            amount: newAmount,
-            currentPrice: price
-          } : p));
+          setPositions(positions.map(p => 
+            p.crypto === crypto 
+              ? { ...p, amount: newAmount, currentPrice: price }
+              : p
+          ));
         } else {
           setPositions(positions.filter(p => p.crypto !== crypto));
         }
-
-        // Add transaction
+        
         const transaction: Transaction = {
           id: Math.random().toString(36).substring(7),
           type: 'sell',
@@ -145,6 +135,7 @@ const Index = () => {
           timestamp: new Date()
         };
         setTransactions([...transactions, transaction]);
+        
         toast({
           title: t('sellSuccess'),
           description: `${t('sold')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
@@ -158,76 +149,160 @@ const Index = () => {
       }
     }
   };
+
   const searchCrypto = async () => {
     if (!contractAddress.trim()) {
       toast({
         title: t('error'),
-        description: "Please enter a valid contract address, symbol, or name.",
+        description: "Veuillez entrer une adresse de contrat, un symbole ou un nom valide.",
         variant: "destructive"
       });
       return;
     }
+    
     setLoading(true);
+    
     try {
       const query = contractAddress.toLowerCase().trim();
-
-      // Méthode 1: Recherche directe par ID/symbole
-      let response = await fetch(`https://api.coingecko.com/api/v3/coins/${query}`);
-      if (!response.ok) {
-        // Méthode 2: Recherche par contrat Ethereum
-        if (query.startsWith('0x') && query.length === 42) {
-          response = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`);
-        }
-
-        // Méthode 3: Recherche générale si les autres échouent
-        if (!response.ok) {
-          const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
-          if (searchResponse.ok) {
-            const searchData = await searchResponse.json();
-
-            // Chercher dans les coins
-            if (searchData.coins && searchData.coins.length > 0) {
-              const coin = searchData.coins[0];
-              response = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.id}`);
+      let cryptoData = null;
+      
+      // Méthode 1: Recherche par adresse de contrat Solana (format Pump.fun)
+      if (query.length > 30 && !query.startsWith('0x')) {
+        try {
+          // Essayer d'abord avec DexScreener API pour Solana
+          const dexResponse = await fetch(
+            `https://api.dexscreener.com/latest/dex/tokens/${query}`,
+            {
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            }
+          );
+          
+          if (dexResponse.ok) {
+            const dexData = await dexResponse.json();
+            if (dexData.pairs && dexData.pairs.length > 0) {
+              const pair = dexData.pairs[0];
+              cryptoData = {
+                id: query,
+                symbol: pair.baseToken.symbol,
+                name: pair.baseToken.name,
+                current_price: parseFloat(pair.priceUsd) || 0,
+                price_change_percentage_24h: parseFloat(pair.priceChange?.h24) || 0,
+                contract_address: query
+              };
+              console.log('Token trouvé via DexScreener:', cryptoData);
             }
           }
+        } catch (error) {
+          console.log('DexScreener indisponible, essai avec CoinGecko...');
         }
       }
-      if (response.ok) {
-        const data = await response.json();
-
-        // Vérifier que les données de prix sont disponibles
-        if (!data.market_data || !data.market_data.current_price) {
-          throw new Error('Price data not available for this cryptocurrency');
+      
+      // Méthode 2: Recherche par adresse de contrat Ethereum
+      if (!cryptoData && query.startsWith('0x') && query.length === 42) {
+        try {
+          const response = await fetch(
+            `https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.market_data && data.market_data.current_price) {
+              cryptoData = {
+                id: data.id,
+                symbol: data.symbol.toUpperCase(),
+                name: data.name,
+                current_price: data.market_data.current_price.usd || 0,
+                price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
+                contract_address: query
+              };
+              console.log('Token trouvé via CoinGecko (Ethereum):', cryptoData);
+            }
+          }
+        } catch (error) {
+          console.log('Erreur CoinGecko Ethereum:', error);
         }
-        setSelectedCrypto({
-          id: data.id,
-          symbol: data.symbol.toUpperCase(),
-          name: data.name,
-          current_price: data.market_data.current_price.usd || 0,
-          price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
-          contract_address: contractAddress
-        });
+      }
+      
+      // Méthode 3: Recherche par ID/symbole CoinGecko
+      if (!cryptoData) {
+        try {
+          const response = await fetch(`https://api.coingecko.com/api/v3/coins/${query}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.market_data && data.market_data.current_price) {
+              cryptoData = {
+                id: data.id,
+                symbol: data.symbol.toUpperCase(),
+                name: data.name,
+                current_price: data.market_data.current_price.usd || 0,
+                price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
+                contract_address: contractAddress
+              };
+              console.log('Token trouvé via CoinGecko (ID):', cryptoData);
+            }
+          }
+        } catch (error) {
+          console.log('Erreur CoinGecko ID:', error);
+        }
+      }
+      
+      // Méthode 4: Recherche générale CoinGecko
+      if (!cryptoData) {
+        try {
+          const searchResponse = await fetch(
+            `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`
+          );
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            if (searchData.coins && searchData.coins.length > 0) {
+              const coin = searchData.coins[0];
+              const detailResponse = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.id}`);
+              
+              if (detailResponse.ok) {
+                const data = await detailResponse.json();
+                if (data.market_data && data.market_data.current_price) {
+                  cryptoData = {
+                    id: data.id,
+                    symbol: data.symbol.toUpperCase(),
+                    name: data.name,
+                    current_price: data.market_data.current_price.usd || 0,
+                    price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
+                    contract_address: contractAddress
+                  };
+                  console.log('Token trouvé via recherche CoinGecko:', cryptoData);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.log('Erreur recherche CoinGecko:', error);
+        }
+      }
+      
+      if (cryptoData) {
+        setSelectedCrypto(cryptoData);
         toast({
           title: t('success'),
-          description: `${data.name} found successfully!`
+          description: `${cryptoData.name} (${cryptoData.symbol}) trouvé avec succès!`
         });
-        console.log('Crypto trouvée:', data.name, 'Prix:', data.market_data.current_price.usd);
       } else {
         throw new Error('Cryptocurrency not found');
       }
+      
     } catch (error) {
-      console.error('Erreur lors de la recherche de crypto:', error);
-
-      // Message d'erreur plus détaillé
-      let errorMessage = "Unable to find this cryptocurrency. Try:";
-      errorMessage += "\n• Contract address (0x... for Ethereum)";
-      errorMessage += "\n• Symbol (BTC, ETH, DOGE)";
-      errorMessage += "\n• Full name (Bitcoin, Ethereum)";
-      errorMessage += "\n• CoinGecko ID";
+      console.error('Erreur lors de la recherche:', error);
       toast({
         title: t('error'),
-        description: errorMessage,
+        description: `Impossible de trouver cette crypto. Essayez:
+• Adresse de contrat Solana (Pump.fun)
+• Adresse de contrat Ethereum (0x...)
+• Symbole (BTC, ETH, DOGE)
+• Nom complet (Bitcoin, Ethereum)`,
         variant: "destructive",
         duration: 8000
       });
@@ -235,6 +310,7 @@ const Index = () => {
       setLoading(false);
     }
   };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -242,7 +318,9 @@ const Index = () => {
       console.error('Erreur lors de la déconnexion:', error);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       {/* Header */}
       <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
         <div className="container mx-auto px-4 py-4">
@@ -278,36 +356,67 @@ const Index = () => {
               <div className="text-right">
                 <p className="text-sm text-gray-300">{t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
                 <p className="text-xs text-gray-400">
-                  {user ? <span className="flex items-center">
+                  {user ? (
+                    <span className="flex items-center">
                       <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
                       Connected: {user.email}
-                    </span> : 'Mode: Demo'}
+                    </span>
+                  ) : 'Mode: Demo'}
                 </p>
               </div>
               
-              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal">
+              <Button 
+                onClick={() => setShowSettings(!showSettings)} 
+                variant="outline" 
+                size="sm" 
+                className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal"
+              >
                 <SettingsIcon className="h-4 w-4" />
               </Button>
               
-              {user ? <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10">
+              {user ? (
+                <Button 
+                  onClick={handleSignOut} 
+                  variant="outline" 
+                  className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10"
+                >
                   <UserCircle className="h-4 w-4 mr-2" />
                   {t('signOut')}
-                </Button> : <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800">
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setShowAuth(!showAuth)} 
+                  variant="outline" 
+                  className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800"
+                >
                   <UserCircle className="h-4 w-4 mr-2" />
                   {t('signIn')}
-                </Button>}
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Navigation */}
           <div className="flex items-center space-x-6 mt-4">
-            <Button variant={activeTab === 'trading' ? 'default' : 'ghost'} onClick={() => setActiveTab('trading')} className={activeTab === 'trading' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'trading' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('trading')}
+              className={activeTab === 'trading' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
               {t('trading')}
             </Button>
-            <Button variant={activeTab === 'portfolio' ? 'default' : 'ghost'} onClick={() => setActiveTab('portfolio')} className={activeTab === 'portfolio' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'portfolio' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('portfolio')}
+              className={activeTab === 'portfolio' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
               {t('portfolio')}
             </Button>
-            <Button variant={activeTab === 'history' ? 'default' : 'ghost'} onClick={() => setActiveTab('history')} className={activeTab === 'history' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'history' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('history')}
+              className={activeTab === 'history' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
               {t('history')}
             </Button>
           </div>
@@ -316,14 +425,23 @@ const Index = () => {
 
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Settings Panel */}
-        {showSettings && <Settings demoBalance={balance} onDemoBalanceChange={setBalance} isDemo={true} />}
+        {showSettings && (
+          <div className="fixed top-20 right-4 z-40">
+            <Settings 
+              demoBalance={balance} 
+              onDemoBalanceChange={setBalance} 
+              isDemo={!user} 
+            />
+          </div>
+        )}
 
         {/* Content based on active tab */}
-        {activeTab === 'trading' && <>
+        {activeTab === 'trading' && (
+          <>
             {/* Popular Cryptos */}
             <PopularCryptos onSelectCrypto={setSelectedCrypto} />
 
-            {/* Meme Coin Search */}
+            {/* Memecoin Search */}
             <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
                 <CardTitle className="flex items-center space-x-2 text-lg">
@@ -333,8 +451,18 @@ const Index = () => {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="flex space-x-4">
-                  <Input type="text" placeholder={t('contractAddress')} value={contractAddress} onChange={e => setContractAddress(e.target.value)} className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400" />
-                  <Button onClick={searchCrypto} disabled={loading} className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white">
+                  <Input
+                    type="text"
+                    placeholder="Adresse de contrat, symbole ou nom (ex: KMnDBXcPXoz6oMJW5XG4tXdwSWpmWEP2RQM1Uujpump)"
+                    value={contractAddress}
+                    onChange={(e) => setContractAddress(e.target.value)}
+                    className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"
+                  />
+                  <Button
+                    onClick={searchCrypto}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white"
+                  >
                     <Search className="h-4 w-4 mr-2" />
                     {loading ? 'Recherche...' : t('search')}
                   </Button>
@@ -343,39 +471,68 @@ const Index = () => {
             </Card>
 
             {/* Trading Interface */}
-            {selectedCrypto ? <TradingInterface cryptoData={selectedCrypto} balance={balance} onTrade={handleTrade} positions={positions} /> : <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+            {selectedCrypto ? (
+              <TradingInterface 
+                cryptoData={selectedCrypto} 
+                balance={balance} 
+                onTrade={handleTrade} 
+                positions={positions} 
+              />
+            ) : (
+              <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
                 <CardContent className="p-12 text-center">
                   <p className="text-gray-400 text-lg">{t('searchToTrade')}</p>
                 </CardContent>
-              </Card>}
-          </>}
+              </Card>
+            )}
+          </>
+        )}
 
-        {activeTab === 'portfolio' && <Portfolio balance={balance} positions={positions} totalPortfolioValue={totalPortfolioValue} />}
+        {activeTab === 'portfolio' && (
+          <Portfolio 
+            balance={balance} 
+            positions={positions} 
+            totalPortfolioValue={totalPortfolioValue} 
+          />
+        )}
 
-        {activeTab === 'history' && transactions.length > 0 && <TransactionHistory transactions={transactions} />}
+        {activeTab === 'history' && transactions.length > 0 && (
+          <TransactionHistory transactions={transactions} />
+        )}
 
-        {activeTab === 'history' && transactions.length === 0 && <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+        {activeTab === 'history' && transactions.length === 0 && (
+          <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
               <p className="text-gray-400 text-lg">Aucune transaction pour le moment</p>
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {/* Auth Panel */}
-        {showAuth && <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        {showAuth && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900/95 rounded-lg p-6 w-full max-w-md border border-gray-700">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-white">Authentication</h2>
-                <Button onClick={() => setShowAuth(false)} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
+                <Button 
+                  onClick={() => setShowAuth(false)} 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-400 hover:text-white"
+                >
                   ✕
                 </Button>
               </div>
               <Auth onClose={() => setShowAuth(false)} />
             </div>
-          </div>}
+          </div>
+        )}
       </div>
 
-      {/* Footer with Axiom sponsorship */}
+      {/* Footer */}
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
