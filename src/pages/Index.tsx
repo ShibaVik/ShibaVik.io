@@ -285,14 +285,14 @@ const Index = () => {
                 </p>
               </div>
               
-              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 bg-slate-900 hover:bg-slate-800 text-fuchsia-500 rounded-none">
+              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal">
                 <SettingsIcon className="h-4 w-4" />
               </Button>
               
               {user ? <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10">
                   <UserCircle className="h-4 w-4 mr-2" />
                   {t('signOut')}
-                </Button> : <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10">
+                </Button> : <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800">
                   <UserCircle className="h-4 w-4 mr-2" />
                   {t('signIn')}
                 </Button>}
