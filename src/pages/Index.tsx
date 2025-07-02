@@ -159,7 +159,7 @@ const Index = () => {
     if (!contractAddress.trim()) {
       toast({
         title: t('error'),
-        description: "Veuillez entrer une adresse de contrat valide.",
+        description: "Please enter a valid contract address, symbol, or name.",
         variant: "destructive",
       });
       return;
@@ -167,23 +167,28 @@ const Index = () => {
 
     setLoading(true);
     try {
-      // Essayer d'abord avec l'ID direct
-      let response = await fetch(`https://api.coingecko.com/api/v3/coins/${contractAddress.toLowerCase()}`);
+      const query = contractAddress.toLowerCase().trim();
+      
+      // Méthode 1: Recherche directe par ID/symbole
+      let response = await fetch(`https://api.coingecko.com/api/v3/coins/${query}`);
       
       if (!response.ok) {
-        // Si ça échoue, essayer avec la recherche par contrat
-        const searchResponse = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`);
+        // Méthode 2: Recherche par contrat Ethereum
+        if (query.startsWith('0x') && query.length === 42) {
+          response = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`);
+        }
         
-        if (searchResponse.ok) {
-          response = searchResponse;
-        } else {
-          // Essayer avec une recherche générale
-          const generalSearch = await fetch(`https://api.coingecko.com/api/v3/search?query=${contractAddress}`);
-          if (generalSearch.ok) {
-            const searchData = await generalSearch.json();
+        // Méthode 3: Recherche générale si les autres échouent
+        if (!response.ok) {
+          const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
+          
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            
+            // Chercher dans les coins
             if (searchData.coins && searchData.coins.length > 0) {
-              const coinId = searchData.coins[0].id;
-              response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}`);
+              const coin = searchData.coins[0];
+              response = await fetch(`https://api.coingecko.com/api/v3/coins/${coin.id}`);
             }
           }
         }
@@ -191,28 +196,45 @@ const Index = () => {
 
       if (response.ok) {
         const data = await response.json();
+        
+        // Vérifier que les données de prix sont disponibles
+        if (!data.market_data || !data.market_data.current_price) {
+          throw new Error('Price data not available for this cryptocurrency');
+        }
+        
         setSelectedCrypto({
           id: data.id,
           symbol: data.symbol.toUpperCase(),
           name: data.name,
-          current_price: data.market_data?.current_price?.usd || 0,
-          price_change_percentage_24h: data.market_data?.price_change_percentage_24h || 0,
+          current_price: data.market_data.current_price.usd || 0,
+          price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
           contract_address: contractAddress,
         });
         
         toast({
-          title: "Succès",
-          description: `${data.name} trouvé avec succès !`,
+          title: t('success'),
+          description: `${data.name} found successfully!`,
         });
+        
+        console.log('Crypto trouvée:', data.name, 'Prix:', data.market_data.current_price.usd);
       } else {
-        throw new Error('Crypto non trouvée');
+        throw new Error('Cryptocurrency not found');
       }
     } catch (error) {
       console.error('Erreur lors de la recherche de crypto:', error);
+      
+      // Message d'erreur plus détaillé
+      let errorMessage = "Unable to find this cryptocurrency. Try:";
+      errorMessage += "\n• Contract address (0x... for Ethereum)";
+      errorMessage += "\n• Symbol (BTC, ETH, DOGE)";
+      errorMessage += "\n• Full name (Bitcoin, Ethereum)";
+      errorMessage += "\n• CoinGecko ID";
+      
       toast({
         title: t('error'),
-        description: "Impossible de trouver cette crypto. Vérifiez l'adresse du contrat ou essayez le nom/symbole de la crypto.",
+        description: errorMessage,
         variant: "destructive",
+        duration: 8000,
       });
     } finally {
       setLoading(false);
@@ -291,10 +313,10 @@ const Index = () => {
                   {user ? (
                     <span className="flex items-center">
                       <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      Connecté: {user.email}
+                      Connected: {user.email}
                     </span>
                   ) : (
-                    'Mode: Démo'
+                    'Mode: Demo'
                   )}
                 </p>
               </div>
@@ -445,7 +467,7 @@ const Index = () => {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900/95 rounded-lg p-6 w-full max-w-md border border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-white">Connexion / Inscription</h2>
+                <h2 className="text-xl font-bold text-white">Authentication</h2>
                 <Button 
                   onClick={() => setShowAuth(false)}
                   variant="ghost"
@@ -455,7 +477,7 @@ const Index = () => {
                   ✕
                 </Button>
               </div>
-              <Auth />
+              <Auth onClose={() => setShowAuth(false)} />
             </div>
           </div>
         )}

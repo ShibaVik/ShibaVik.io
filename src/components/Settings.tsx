@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings as SettingsIcon, Globe, DollarSign, Coins } from 'lucide-react';
+import { Globe, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Select,
@@ -23,7 +23,6 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ demoBalance, onDemoBalanceChange, isDemo }) => {
   const { language, setLanguage, t } = useLanguage();
   const [newBalance, setNewBalance] = useState(demoBalance.toString());
-  const [initialBalance, setInitialBalance] = useState('10000');
 
   const handleBalanceUpdate = () => {
     const balance = parseFloat(newBalance);
@@ -32,97 +31,46 @@ const Settings: React.FC<SettingsProps> = ({ demoBalance, onDemoBalanceChange, i
     }
   };
 
-  const handleInitialBalanceSet = () => {
-    const balance = parseFloat(initialBalance);
-    if (balance > 0) {
-      onDemoBalanceChange(balance);
-      setNewBalance(balance.toString());
-    }
-  };
-
   return (
-    <Card className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 border-purple-500/50 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2 text-white">
-          <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg">
-            <SettingsIcon className="h-5 w-5 text-white" />
-          </div>
-          <span>Paramètres</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <Card className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border-purple-500/30 backdrop-blur-sm">
+      <CardContent className="p-4 space-y-4">
         {/* Language Selection */}
-        <div className="space-y-2">
-          <Label className="text-gray-200 font-medium flex items-center space-x-2">
-            <Globe className="h-4 w-4 text-blue-400" />
-            <span>Langue / Language</span>
-          </Label>
+        <div className="flex items-center space-x-3">
+          <Globe className="h-4 w-4 text-blue-400" />
+          <Label className="text-gray-200 text-sm">Language</Label>
           <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="bg-gray-700/50 border-gray-600/50 text-gray-100 hover:border-purple-400/50">
+            <SelectTrigger className="w-32 bg-gray-700/50 border-gray-600/50 text-gray-100 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700">
-              <SelectItem value="fr" className="text-gray-100 hover:bg-gray-700">🇫🇷 Français</SelectItem>
-              <SelectItem value="en" className="text-gray-100 hover:bg-gray-700">🇺🇸 English</SelectItem>
+              <SelectItem value="en" className="text-gray-100 hover:bg-gray-700">🇺🇸 EN</SelectItem>
+              <SelectItem value="fr" className="text-gray-100 hover:bg-gray-700">🇫🇷 FR</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Demo Balance (only show if in demo mode) */}
         {isDemo && (
-          <>
-            {/* Current Demo Balance */}
-            <div className="space-y-3">
-              <Label className="text-gray-200 font-medium flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-green-400" />
-                <span>Solde Démo Actuel</span>
-              </Label>
-              <div className="flex space-x-3">
-                <Input
-                  type="number"
-                  value={newBalance}
-                  onChange={(e) => setNewBalance(e.target.value)}
-                  className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 flex-1"
-                  placeholder="10000"
-                />
-                <Button 
-                  onClick={handleBalanceUpdate}
-                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                >
-                  Appliquer
-                </Button>
-              </div>
-              <p className="text-xs text-gray-400">
-                Modifiez votre solde de démo actuel
-              </p>
+          <div className="flex items-center space-x-3">
+            <DollarSign className="h-4 w-4 text-green-400" />
+            <Label className="text-gray-200 text-sm">Demo Balance</Label>
+            <div className="flex space-x-2">
+              <Input
+                type="number"
+                value={newBalance}
+                onChange={(e) => setNewBalance(e.target.value)}
+                className="w-24 h-8 bg-gray-700/50 border-gray-600/50 text-white text-xs"
+                placeholder="10000"
+              />
+              <Button 
+                onClick={handleBalanceUpdate}
+                size="sm"
+                className="h-8 px-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
+              >
+                Set
+              </Button>
             </div>
-
-            {/* Initial Demo Balance */}
-            <div className="space-y-3">
-              <Label className="text-gray-200 font-medium flex items-center space-x-2">
-                <Coins className="h-4 w-4 text-cyan-400" />
-                <span>Nouveau Solde Démo Initial</span>
-              </Label>
-              <div className="flex space-x-3">
-                <Input
-                  type="number"
-                  value={initialBalance}
-                  onChange={(e) => setInitialBalance(e.target.value)}
-                  className="bg-gray-700/50 border-gray-600/50 text-white placeholder-gray-400 flex-1"
-                  placeholder="10000"
-                />
-                <Button 
-                  onClick={handleInitialBalanceSet}
-                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white"
-                >
-                  Définir
-                </Button>
-              </div>
-              <p className="text-xs text-gray-400">
-                Définissez un nouveau solde de démo de base
-              </p>
-            </div>
-          </>
+          </div>
         )}
       </CardContent>
     </Card>

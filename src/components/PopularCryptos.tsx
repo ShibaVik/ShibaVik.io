@@ -60,7 +60,7 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-white">
             <Star className="h-5 w-5 text-yellow-400" />
-            <span>Cryptos Populaires</span>
+            <span>{t('popularCryptos')}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -77,7 +77,7 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
       <CardHeader>
         <CardTitle className="flex items-center space-x-2 text-white">
           <Star className="h-5 w-5 text-yellow-400" />
-          <span>Cryptos Populaires</span>
+          <span>{t('popularCryptos')}</span>
           <span className="text-xs text-green-400 ml-2">⚡ {t('priceUpdated')}</span>
         </CardTitle>
       </CardHeader>
