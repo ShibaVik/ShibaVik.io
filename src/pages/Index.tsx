@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface Transaction {
   crypto: string;
   amount: number;
   price: number;
+  total: number;
   timestamp: Date;
 }
 
@@ -92,6 +94,7 @@ const Index = () => {
           crypto,
           amount,
           price,
+          total: cost,
           timestamp: new Date(),
         };
         setTransactions([...transactions, transaction]);
@@ -130,6 +133,7 @@ const Index = () => {
           crypto,
           amount,
           price,
+          total: cost,
           timestamp: new Date(),
         };
         setTransactions([...transactions, transaction]);
