@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,34 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Globe, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 interface SettingsProps {
   demoBalance: number;
   onDemoBalanceChange: (balance: number) => void;
   isDemo: boolean;
 }
-
-const Settings: React.FC<SettingsProps> = ({ demoBalance, onDemoBalanceChange, isDemo }) => {
-  const { language, setLanguage, t } = useLanguage();
+const Settings: React.FC<SettingsProps> = ({
+  demoBalance,
+  onDemoBalanceChange,
+  isDemo
+}) => {
+  const {
+    language,
+    setLanguage,
+    t
+  } = useLanguage();
   const [newBalance, setNewBalance] = useState(demoBalance.toString());
-
   const handleBalanceUpdate = () => {
     const balance = parseFloat(newBalance);
     if (balance > 0) {
       onDemoBalanceChange(balance);
     }
   };
-
-  return (
-    <Card className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border-purple-500/30 backdrop-blur-sm">
-      <CardContent className="p-4 space-y-4">
+  return <Card className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border-purple-500/30 backdrop-blur-sm bg-slate-900 py-0">
+      <CardContent className="p-4 space-y-4 bg-slate-900 py-[16px] my-0">
         {/* Language Selection */}
         <div className="flex items-center space-x-3">
           <Globe className="h-4 w-4 text-blue-400" />
@@ -50,31 +46,17 @@ const Settings: React.FC<SettingsProps> = ({ demoBalance, onDemoBalanceChange, i
         </div>
 
         {/* Demo Balance (only show if in demo mode) */}
-        {isDemo && (
-          <div className="flex items-center space-x-3">
+        {isDemo && <div className="flex items-center space-x-3">
             <DollarSign className="h-4 w-4 text-green-400" />
             <Label className="text-gray-200 text-sm">Demo Balance</Label>
             <div className="flex space-x-2">
-              <Input
-                type="number"
-                value={newBalance}
-                onChange={(e) => setNewBalance(e.target.value)}
-                className="w-24 h-8 bg-gray-700/50 border-gray-600/50 text-white text-xs"
-                placeholder="10000"
-              />
-              <Button 
-                onClick={handleBalanceUpdate}
-                size="sm"
-                className="h-8 px-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs"
-              >
+              <Input type="number" value={newBalance} onChange={e => setNewBalance(e.target.value)} className="w-24 h-8 bg-gray-700/50 border-gray-600/50 text-white text-xs" placeholder="10000" />
+              <Button onClick={handleBalanceUpdate} size="sm" className="h-8 px-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs">
                 Set
               </Button>
             </div>
-          </div>
-        )}
+          </div>}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
-
 export default Settings;
