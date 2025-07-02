@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Search, UserCircle, Settings as SettingsIcon, Github, Linkedin } from 'lucide-react';
 import TradingInterface from '@/components/TradingInterface';
 import PopularCryptos from '@/components/PopularCryptos';
 import Portfolio from '@/components/Portfolio';
@@ -156,33 +156,64 @@ const Index = () => {
   };
 
   const searchCrypto = async () => {
+    if (!contractAddress.trim()) {
+      toast({
+        title: t('error'),
+        description: "Veuillez entrer une adresse de contrat valide.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`https://api.coingecko.com/api/v3/coins/${contractAddress}`);
+      // Essayer d'abord avec l'ID direct
+      let response = await fetch(`https://api.coingecko.com/api/v3/coins/${contractAddress.toLowerCase()}`);
+      
+      if (!response.ok) {
+        // Si ça échoue, essayer avec la recherche par contrat
+        const searchResponse = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`);
+        
+        if (searchResponse.ok) {
+          response = searchResponse;
+        } else {
+          // Essayer avec une recherche générale
+          const generalSearch = await fetch(`https://api.coingecko.com/api/v3/search?query=${contractAddress}`);
+          if (generalSearch.ok) {
+            const searchData = await generalSearch.json();
+            if (searchData.coins && searchData.coins.length > 0) {
+              const coinId = searchData.coins[0].id;
+              response = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}`);
+            }
+          }
+        }
+      }
+
       if (response.ok) {
         const data = await response.json();
         setSelectedCrypto({
           id: data.id,
           symbol: data.symbol.toUpperCase(),
           name: data.name,
-          current_price: data.market_data.current_price.usd,
-          price_change_percentage_24h: data.market_data.price_change_percentage_24h,
+          current_price: data.market_data?.current_price?.usd || 0,
+          price_change_percentage_24h: data.market_data?.price_change_percentage_24h || 0,
           contract_address: contractAddress,
         });
-      } else {
+        
         toast({
-          title: t('error'),
-          description: "Impossible de trouver la crypto avec cette adresse de contrat.",
-          variant: "destructive",
-        })
+          title: "Succès",
+          description: `${data.name} trouvé avec succès !`,
+        });
+      } else {
+        throw new Error('Crypto non trouvée');
       }
     } catch (error) {
       console.error('Erreur lors de la recherche de crypto:', error);
       toast({
         title: t('error'),
-        description: "Une erreur s'est produite lors de la recherche de la crypto.",
+        description: "Impossible de trouver cette crypto. Vérifiez l'adresse du contrat ou essayez le nom/symbole de la crypto.",
         variant: "destructive",
-      })
+      });
     } finally {
       setLoading(false);
     }
@@ -202,19 +233,70 @@ const Index = () => {
       <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-4">
               <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">S</span>
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
                 {t('title')}
               </h1>
+              
+              {/* Social Links */}
+              <div className="hidden md:flex items-center space-x-2 ml-4">
+                <a
+                  href="https://twitter.com/Nft_ShibaVik"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                  title="Twitter"
+                >
+                  <span className="text-gray-300 hover:text-cyan-400">𝕏</span>
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/sullyvan-milhau"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                  title="LinkedIn"
+                >
+                  <Linkedin className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                </a>
+                <a
+                  href="https://opensea.io/ShibaVik"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                  title="OpenSea"
+                >
+                  <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">OS</span>
+                  </div>
+                </a>
+                <a
+                  href="https://github.com/ShibaVik"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                  title="GitHub"
+                >
+                  <Github className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                </a>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-sm text-gray-300">{t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
-                <p className="text-xs text-gray-400">Mode: Démo</p>
+                <p className="text-xs text-gray-400">
+                  {user ? (
+                    <span className="flex items-center">
+                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                      Connecté: {user.email}
+                    </span>
+                  ) : (
+                    'Mode: Démo'
+                  )}
+                </p>
               </div>
               
               <Button 

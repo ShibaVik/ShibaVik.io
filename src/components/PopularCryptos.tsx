@@ -25,20 +25,27 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
 
   useEffect(() => {
     fetchPopularCryptos();
-    // Actualiser toutes les 30 secondes
+    // Actualiser toutes les 30 secondes pour synchroniser les données
     const interval = setInterval(fetchPopularCryptos, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const fetchPopularCryptos = async () => {
     try {
+      // Récupérer spécifiquement BTC, ETH, SOL, BNB
+      const cryptoIds = ['bitcoin', 'ethereum', 'solana', 'binancecoin'];
       const response = await fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1&sparkline=false&price_change_percentage=24h'
+        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cryptoIds.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`
       );
       
       if (response.ok) {
         const data = await response.json();
-        setCryptos(data);
+        // S'assurer que les données sont dans l'ordre souhaité
+        const orderedData = cryptoIds.map(id => data.find((crypto: any) => crypto.id === id)).filter(Boolean);
+        setCryptos(orderedData);
+        console.log('Cryptos populaires synchronisées:', orderedData.map(c => c.symbol));
+      } else {
+        console.error('Erreur API:', response.status);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des cryptos populaires:', error);

@@ -9,44 +9,67 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
+    // Fonction pour synchroniser les données utilisateur
+    const syncUserData = async (currentSession: Session | null) => {
+      if (!mounted) return;
+      
+      console.log('Synchronisation des données utilisateur:', currentSession?.user?.email);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setLoading(false);
+    };
+
+    // Vérifier la session existante au chargement
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Erreur lors de la récupération de la session:', error);
+        }
+        await syncUserData(session);
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation de la session:', error);
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
     // Écouter les changements d'état d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+      async (event, session) => {
+        console.log('Changement d\'état auth:', event, session?.user?.email);
+        await syncUserData(session);
       }
     );
 
-    // Vérifier la session existante
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Tentative de connexion pour:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (error) {
-        console.error('Sign in error:', error);
+        console.error('Erreur de connexion:', error.message);
         return { data: null, error };
       }
       
-      console.log('Sign in successful:', data.user?.email);
+      console.log('Connexion réussie:', data.user?.email);
       return { data, error: null };
     } catch (err) {
-      console.error('Sign in exception:', err);
+      console.error('Exception lors de la connexion:', err);
       return { data: null, error: err };
     } finally {
       setLoading(false);
@@ -56,6 +79,8 @@ export const useAuth = () => {
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
+      console.log('Tentative d\'inscription pour:', email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -65,14 +90,14 @@ export const useAuth = () => {
       });
       
       if (error) {
-        console.error('Sign up error:', error);
+        console.error('Erreur d\'inscription:', error.message);
         return { data: null, error };
       }
       
-      console.log('Sign up successful:', data.user?.email);
+      console.log('Inscription réussie:', data.user?.email);
       return { data, error: null };
     } catch (err) {
-      console.error('Sign up exception:', err);
+      console.error('Exception lors de l\'inscription:', err);
       return { data: null, error: err };
     } finally {
       setLoading(false);
@@ -82,16 +107,18 @@ export const useAuth = () => {
   const signOut = async () => {
     try {
       setLoading(true);
+      console.log('Tentative de déconnexion');
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Sign out error:', error);
+        console.error('Erreur de déconnexion:', error.message);
       } else {
-        console.log('Sign out successful');
+        console.log('Déconnexion réussie');
         setUser(null);
         setSession(null);
       }
     } catch (err) {
-      console.error('Sign out exception:', err);
+      console.error('Exception lors de la déconnexion:', err);
     } finally {
       setLoading(false);
     }
