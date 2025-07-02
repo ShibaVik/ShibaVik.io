@@ -46,7 +46,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                     <Badge variant={transaction.type === 'buy' ? "default" : "destructive"} className={transaction.type === 'buy' ? "bg-green-600" : "bg-red-600"}>
                       {transaction.type === 'buy' ? 'ACHAT' : 'VENTE'}
                     </Badge>
-                    <span className="font-semibold">{transaction.crypto}</span>
+                    <span className="font-semibold text-slate-50">{transaction.crypto}</span>
                   </div>
                   <p className="text-sm text-gray-400">
                     {transaction.amount.toLocaleString()} tokens @ ${transaction.price.toFixed(8)}
