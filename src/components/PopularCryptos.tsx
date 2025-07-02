@@ -2,127 +2,111 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Star } from 'lucide-react';
+import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-interface PopularCrypto {
+interface CryptoData {
   id: string;
   symbol: string;
   name: string;
   current_price: number;
   price_change_percentage_24h: number;
-  contract_address?: string;
+  image: string;
 }
 
 interface PopularCryptosProps {
-  onSelectCrypto: (crypto: PopularCrypto) => void;
+  onSelectCrypto: (crypto: CryptoData) => void;
 }
 
 const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
   const { t } = useLanguage();
-  const [cryptos, setCryptos] = useState<PopularCrypto[]>([
-    {
-      id: 'bitcoin',
-      symbol: 'BTC',
-      name: 'Bitcoin',
-      current_price: 67234.50,
-      price_change_percentage_24h: 2.4,
-    },
-    {
-      id: 'ethereum',
-      symbol: 'ETH',
-      name: 'Ethereum',
-      current_price: 3456.78,
-      price_change_percentage_24h: -1.2,
-    },
-    {
-      id: 'solana',
-      symbol: 'SOL',
-      name: 'Solana',
-      current_price: 178.90,
-      price_change_percentage_24h: 4.7,
-    },
-  ]);
+  const [cryptos, setCryptos] = useState<CryptoData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch real-time prices from CoinGecko API
   useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true'
-        );
-        const data = await response.json();
-        
-        setCryptos(prev => prev.map(crypto => {
-          let apiKey = '';
-          if (crypto.id === 'bitcoin') apiKey = 'bitcoin';
-          else if (crypto.id === 'ethereum') apiKey = 'ethereum';
-          else if (crypto.id === 'solana') apiKey = 'solana';
-          
-          if (data[apiKey]) {
-            return {
-              ...crypto,
-              current_price: data[apiKey].usd,
-              price_change_percentage_24h: data[apiKey].usd_24h_change || 0
-            };
-          }
-          return crypto;
-        }));
-      } catch (error) {
-        console.error('Erreur lors de la récupération des prix:', error);
-      }
-    };
-
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30000); // Update every 30 seconds
+    fetchPopularCryptos();
+    // Actualiser toutes les 30 secondes
+    const interval = setInterval(fetchPopularCryptos, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  const fetchPopularCryptos = async () => {
+    try {
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1&sparkline=false&price_change_percentage=24h'
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCryptos(data);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des cryptos populaires:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-white">
+            <Star className="h-5 w-5 text-yellow-400" />
+            <span>Cryptos Populaires</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="bg-gradient-to-br from-orange-900/20 to-yellow-900/20 border-orange-500/50 backdrop-blur-sm">
+    <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="flex items-center space-x-2 text-white">
-          <div className="p-2 bg-gradient-to-r from-orange-500 to-yellow-600 rounded-lg">
-            <Star className="h-5 w-5 text-white" />
-          </div>
+          <Star className="h-5 w-5 text-yellow-400" />
           <span>Cryptos Populaires</span>
+          <span className="text-xs text-green-400 ml-2">⚡ {t('priceUpdated')}</span>
         </CardTitle>
-        <p className="text-sm text-gray-300">Commencez avec des actifs moins volatiles</p>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {cryptos.map((crypto) => (
-            <div
+            <Button
               key={crypto.id}
-              className="p-4 bg-gradient-to-br from-gray-700/50 to-gray-800/50 rounded-xl border border-gray-600/50 hover:border-orange-400/50 transition-all duration-200 cursor-pointer group"
               onClick={() => onSelectCrypto(crypto)}
+              variant="outline"
+              className="bg-gray-800/80 border-gray-600 hover:bg-gray-700/80 text-white p-4 h-auto flex flex-col items-center space-y-2 transition-all duration-200 hover:border-cyan-400/50"
             >
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h3 className="font-bold text-white text-lg">{crypto.symbol}</h3>
-                  <p className="text-xs text-gray-300">{crypto.name}</p>
+              <div className="flex items-center space-x-2">
+                <img src={crypto.image} alt={crypto.name} className="w-6 h-6" />
+                <div className="text-left">
+                  <p className="font-semibold text-sm">{crypto.symbol.toUpperCase()}</p>
+                  <p className="text-xs text-gray-400">{crypto.name}</p>
                 </div>
-                <div className={`flex items-center space-x-1 ${
+              </div>
+              
+              <div className="text-center w-full">
+                <p className="font-bold text-white">${crypto.current_price.toFixed(4)}</p>
+                <div className={`flex items-center justify-center space-x-1 ${
                   crypto.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
                 }`}>
-                  <TrendingUp className={`h-4 w-4 ${crypto.price_change_percentage_24h < 0 ? 'rotate-180' : ''}`} />
-                  <span className="text-sm font-medium">
-                    {crypto.price_change_percentage_24h >= 0 ? '+' : ''}{crypto.price_change_percentage_24h.toFixed(1)}%
+                  {crypto.price_change_percentage_24h >= 0 ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+                  <span className="text-xs font-medium">
+                    {crypto.price_change_percentage_24h.toFixed(2)}%
                   </span>
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-xl font-bold text-transparent bg-gradient-to-r from-orange-400 to-yellow-500 bg-clip-text">
-                  ${crypto.current_price.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </p>
-                <Button
-                  size="sm"
-                  className="w-full bg-gradient-to-r from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                >
-                  Sélectionner
-                </Button>
-              </div>
-            </div>
+            </Button>
           ))}
         </div>
       </CardContent>

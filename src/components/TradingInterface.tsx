@@ -1,11 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CryptoData {
   id: string;
@@ -30,259 +37,229 @@ interface TradingInterfaceProps {
   positions: Position[];
 }
 
-const TradingInterface: React.FC<TradingInterfaceProps> = ({ 
-  cryptoData, 
-  balance, 
+const TradingInterface: React.FC<TradingInterfaceProps> = ({
+  cryptoData,
+  balance,
   onTrade,
-  positions 
+  positions
 }) => {
   const { t } = useLanguage();
-  const [buyAmount, setBuyAmount] = useState('');
-  const [buyDollarAmount, setBuyDollarAmount] = useState('');
-  const [sellAmount, setSellAmount] = useState('');
-  const [sellDollarAmount, setSellDollarAmount] = useState('');
-  const [buyMode, setBuyMode] = useState<'tokens' | 'dollars'>('tokens');
-  const [sellMode, setSellMode] = useState<'tokens' | 'dollars'>('tokens');
+  const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
+  const [inputMode, setInputMode] = useState<'tokens' | 'usd'>('tokens');
+  const [tokenAmount, setTokenAmount] = useState('');
+  const [usdAmount, setUsdAmount] = useState('');
 
-  const currentPosition = positions.find(p => p.crypto === cryptoData.symbol);
-  const maxBuyAmount = Math.floor(balance / cryptoData.current_price);
-  const maxSellAmount = currentPosition?.amount || 0;
+  const position = positions.find(p => p.crypto === cryptoData.symbol);
+  const maxTokens = position ? position.amount : 0;
+  const maxUSD = tradeType === 'buy' ? balance : (maxTokens * cryptoData.current_price);
 
-  const handleBuyAmountChange = (value: string, mode: 'tokens' | 'dollars') => {
-    if (mode === 'tokens') {
-      setBuyAmount(value);
-      setBuyDollarAmount((parseFloat(value) * cryptoData.current_price).toFixed(2));
+  // Synchroniser les montants quand l'un change
+  useEffect(() => {
+    if (inputMode === 'tokens' && tokenAmount) {
+      const usd = parseFloat(tokenAmount) * cryptoData.current_price;
+      setUsdAmount(usd.toFixed(2));
+    } else if (inputMode === 'usd' && usdAmount) {
+      const tokens = parseFloat(usdAmount) / cryptoData.current_price;
+      setTokenAmount(tokens.toFixed(6));
+    }
+  }, [tokenAmount, usdAmount, inputMode, cryptoData.current_price]);
+
+  const handleTrade = () => {
+    const amount = parseFloat(tokenAmount);
+    if (amount > 0) {
+      onTrade(tradeType, amount);
+      setTokenAmount('');
+      setUsdAmount('');
+    }
+  };
+
+  const setMaxAmount = () => {
+    if (tradeType === 'buy') {
+      const maxTokensFromBalance = balance / cryptoData.current_price;
+      setTokenAmount(maxTokensFromBalance.toFixed(6));
+      setUsdAmount(balance.toFixed(2));
     } else {
-      setBuyDollarAmount(value);
-      setBuyAmount((parseFloat(value) / cryptoData.current_price).toFixed(0));
-    }
-  };
-
-  const handleSellAmountChange = (value: string, mode: 'tokens' | 'dollars') => {
-    if (mode === 'tokens') {
-      setSellAmount(value);
-      setSellDollarAmount((parseFloat(value) * cryptoData.current_price).toFixed(2));
-    } else {
-      setSellDollarAmount(value);
-      setSellAmount((parseFloat(value) / cryptoData.current_price).toFixed(0));
-    }
-  };
-
-  const handleBuy = () => {
-    const amount = parseFloat(buyAmount);
-    if (amount > 0 && amount <= maxBuyAmount) {
-      onTrade('buy', amount);
-      setBuyAmount('');
-      setBuyDollarAmount('');
-    }
-  };
-
-  const handleSell = () => {
-    const amount = parseFloat(sellAmount);
-    if (amount > 0 && amount <= maxSellAmount) {
-      onTrade('sell', amount);
-      setSellAmount('');
-      setSellDollarAmount('');
+      setTokenAmount(maxTokens.toFixed(6));
+      setUsdAmount((maxTokens * cryptoData.current_price).toFixed(2));
     }
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Buy Section */}
-      <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
-        <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5" />
-            <span>Acheter {cryptoData.symbol}</span>
+      {/* Crypto Info */}
+      <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between text-white">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">{cryptoData.symbol.charAt(0)}</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">{cryptoData.symbol}</h2>
+                <p className="text-sm text-gray-400">{cryptoData.name}</p>
+              </div>
+            </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="flex space-x-2 mb-4">
-            <Button
-              variant={buyMode === 'tokens' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBuyMode('tokens')}
-              className={buyMode === 'tokens' 
-                ? "bg-green-600 hover:bg-green-700 text-white" 
-                : "border-gray-600 text-gray-300 hover:bg-gray-700"
-              }
-            >
-              Tokens
-            </Button>
-            <Button
-              variant={buyMode === 'dollars' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBuyMode('dollars')}
-              className={buyMode === 'dollars' 
-                ? "bg-green-600 hover:bg-green-700 text-white" 
-                : "border-gray-600 text-gray-300 hover:bg-gray-700"
-              }
-            >
-              Total USD
-            </Button>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">{t('currentPrice')}</span>
+            <span className="text-2xl font-bold text-white">${cryptoData.current_price.toFixed(8)}</span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">24h Change</span>
+            <div className={`flex items-center space-x-1 ${
+              cryptoData.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {cryptoData.price_change_percentage_24h >= 0 ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <TrendingDown className="h-4 w-4" />
+              )}
+              <span className="font-bold">
+                {cryptoData.price_change_percentage_24h.toFixed(2)}%
+              </span>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-gray-200 font-medium">
-              {buyMode === 'tokens' ? 'Quantité' : 'Montant Total'}
-            </Label>
-            {buyMode === 'tokens' ? (
-              <Input
-                type="number"
-                placeholder="Nombre de tokens"
-                value={buyAmount}
-                onChange={(e) => handleBuyAmountChange(e.target.value, 'tokens')}
-                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                max={maxBuyAmount}
-              />
-            ) : (
-              <Input
-                type="number"
-                placeholder="Montant en dollars"
-                value={buyDollarAmount}
-                onChange={(e) => handleBuyAmountChange(e.target.value, 'dollars')}
-                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                max={balance}
-              />
-            )}
-            <p className="text-xs text-gray-400">
-              Maximum: {maxBuyAmount.toLocaleString()} tokens (${balance.toFixed(2)})
-            </p>
-          </div>
-
-          {(buyAmount || buyDollarAmount) && (
-            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 space-y-2">
-              <div className="flex justify-between text-gray-300">
-                <span>Prix unitaire:</span>
-                <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
-              </div>
-              <div className="flex justify-between text-gray-300">
-                <span>Quantité:</span>
-                <span className="text-white">{parseFloat(buyAmount || '0').toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between font-bold text-white border-t border-gray-600 pt-2">
-                <span>Total:</span>
-                <span className="text-green-400">
-                  ${buyDollarAmount || (parseFloat(buyAmount || '0') * cryptoData.current_price).toFixed(2)}
-                </span>
+          {position && (
+            <div className="bg-gray-800/80 rounded-lg p-4 border border-gray-700">
+              <h3 className="text-sm font-medium text-gray-400 mb-2">{t('position')}</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">{t('quantity')}</span>
+                  <span className="text-white">{position.amount.toFixed(6)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">{t('avgPurchasePrice')}</span>
+                  <span className="text-white">${position.avgPrice.toFixed(8)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Valeur actuelle</span>
+                  <span className="text-cyan-400">${(position.amount * cryptoData.current_price).toFixed(2)}</span>
+                </div>
               </div>
             </div>
           )}
-
-          <Button 
-            onClick={handleBuy}
-            disabled={!buyAmount || parseFloat(buyAmount) <= 0 || parseFloat(buyAmount) > maxBuyAmount}
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
-          >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Acheter
-          </Button>
         </CardContent>
       </Card>
 
-      {/* Sell Section */}
-      <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
-        <CardHeader className="bg-gradient-to-r from-red-600 to-rose-600 text-white">
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingDown className="h-5 w-5" />
-            <span>Vendre {cryptoData.symbol}</span>
-          </CardTitle>
+      {/* Trading Panel */}
+      <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-white">{t('trading')}</CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="flex space-x-2 mb-4">
+        <CardContent className="space-y-6">
+          {/* Trade Type Selection */}
+          <div className="flex space-x-2">
             <Button
-              variant={sellMode === 'tokens' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSellMode('tokens')}
-              className={sellMode === 'tokens' 
-                ? "bg-red-600 hover:bg-red-700 text-white" 
-                : "border-gray-600 text-gray-300 hover:bg-gray-700"
-              }
+              onClick={() => setTradeType('buy')}
+              className={`flex-1 ${
+                tradeType === 'buy'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                  : 'bg-gray-800/80 text-gray-300 hover:text-white border border-gray-600'
+              }`}
             >
-              Tokens
+              {t('buy')}
             </Button>
             <Button
-              variant={sellMode === 'dollars' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSellMode('dollars')}
-              className={sellMode === 'dollars' 
-                ? "bg-red-600 hover:bg-red-700 text-white" 
-                : "border-gray-600 text-gray-300 hover:bg-gray-700"
-              }
+              onClick={() => setTradeType('sell')}
+              disabled={!position || position.amount === 0}
+              className={`flex-1 ${
+                tradeType === 'sell'
+                  ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                  : 'bg-gray-800/80 text-gray-300 hover:text-white border border-gray-600'
+              }`}
             >
-              Total USD
+              {t('sell')}
             </Button>
           </div>
 
+          {/* Input Mode Selection */}
           <div className="space-y-2">
-            <Label className="text-gray-200 font-medium">
-              {sellMode === 'tokens' ? 'Quantité' : 'Montant Total'}
-            </Label>
-            {sellMode === 'tokens' ? (
-              <Input
-                type="number"
-                placeholder="Nombre de tokens"
-                value={sellAmount}
-                onChange={(e) => handleSellAmountChange(e.target.value, 'tokens')}
-                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                max={maxSellAmount}
-              />
-            ) : (
-              <Input
-                type="number"
-                placeholder="Montant en dollars"
-                value={sellDollarAmount}
-                onChange={(e) => handleSellAmountChange(e.target.value, 'dollars')}
-                className="bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-                max={maxSellAmount * cryptoData.current_price}
-              />
-            )}
-            <p className="text-xs text-gray-400">
-              Position: {maxSellAmount.toLocaleString()} tokens
-            </p>
+            <Label className="text-gray-200">Mode de saisie</Label>
+            <Select value={inputMode} onValueChange={(value: 'tokens' | 'usd') => setInputMode(value)}>
+              <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectItem value="tokens" className="text-gray-100 hover:bg-gray-700">
+                  {t('amountInTokens')}
+                </SelectItem>
+                <SelectItem value="usd" className="text-gray-100 hover:bg-gray-700">
+                  {t('amountInDollars')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {currentPosition && (
-            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600 space-y-2">
-              <div className="flex justify-between text-gray-300">
-                <span>Prix d'achat moyen:</span>
-                <span className="text-white">${currentPosition.avgPrice.toFixed(8)}</span>
+          {/* Amount Inputs */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-gray-200">
+                  {inputMode === 'tokens' ? t('quantity') : t('amountInDollars')}
+                </Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={setMaxAmount}
+                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                >
+                  {t('maximum')}: {inputMode === 'tokens' 
+                    ? (tradeType === 'buy' 
+                      ? (balance / cryptoData.current_price).toFixed(6)
+                      : maxTokens.toFixed(6)
+                    )
+                    : maxUSD.toFixed(2)
+                  }
+                </Button>
               </div>
-              <div className="flex justify-between text-gray-300">
-                <span>Prix actuel:</span>
+              <Input
+                type="number"
+                placeholder={inputMode === 'tokens' ? "0.000000" : "0.00"}
+                value={inputMode === 'tokens' ? tokenAmount : usdAmount}
+                onChange={(e) => {
+                  if (inputMode === 'tokens') {
+                    setTokenAmount(e.target.value);
+                  } else {
+                    setUsdAmount(e.target.value);
+                  }
+                }}
+                className="bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"
+              />
+            </div>
+
+            {/* Summary */}
+            <div className="bg-gray-800/80 rounded-lg p-4 border border-gray-700 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">{t('unitPrice')}</span>
                 <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
               </div>
-              <div className="flex justify-between font-bold text-white border-t border-gray-600 pt-2">
-                <span>P&L:</span>
-                <span className={
-                  (cryptoData.current_price - currentPosition.avgPrice) >= 0 
-                    ? "text-green-400" 
-                    : "text-red-400"
-                }>
-                  {((cryptoData.current_price - currentPosition.avgPrice) / currentPosition.avgPrice * 100).toFixed(2)}%
-                </span>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">{t('quantity')}</span>
+                <span className="text-white">{tokenAmount || '0'} {cryptoData.symbol}</span>
+              </div>
+              <div className="flex justify-between font-medium">
+                <span className="text-gray-300">{t('total')}</span>
+                <span className="text-cyan-400">${usdAmount || '0.00'}</span>
               </div>
             </div>
-          )}
+          </div>
 
-          {(sellAmount || sellDollarAmount) && (
-            <div className="p-4 bg-gray-800 rounded-lg border border-gray-600">
-              <div className="flex justify-between font-bold text-white">
-                <span>Total de vente:</span>
-                <span className="text-red-400">
-                  ${sellDollarAmount || (parseFloat(sellAmount || '0') * cryptoData.current_price).toFixed(2)}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <Button 
-            onClick={handleSell}
-            disabled={!sellAmount || parseFloat(sellAmount) <= 0 || parseFloat(sellAmount) > maxSellAmount || !currentPosition}
-            className="w-full bg-red-600 hover:bg-red-700 text-white"
+          {/* Trade Button */}
+          <Button
+            onClick={handleTrade}
+            disabled={!tokenAmount || parseFloat(tokenAmount) <= 0}
+            className={`w-full py-3 text-lg font-bold ${
+              tradeType === 'buy'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+            }`}
           >
-            <DollarSign className="h-4 w-4 mr-2" />
-            Vendre
+            <DollarSign className="h-5 w-5 mr-2" />
+            {tradeType === 'buy' ? t('buy') : t('sell')} {cryptoData.symbol}
           </Button>
         </CardContent>
       </Card>

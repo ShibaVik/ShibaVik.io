@@ -34,7 +34,7 @@ const translations = {
     contractAddress: "Adresse du contrat (Solana, Ethereum, BSC...)",
     search: "Rechercher",
     examples: "💡 Exemples d'adresses :",
-    priceUpdated: "⚡ Prix actualisé automatiquement",
+    priceUpdated: "Prix actualisé automatiquement",
     trading: "Trading",
     portfolio: "Portfolio",
     history: "Historique",
@@ -100,7 +100,7 @@ const translations = {
     contractAddress: "Contract address (Solana, Ethereum, BSC...)",
     search: "Search",
     examples: "💡 Address examples:",
-    priceUpdated: "⚡ Price updated automatically",
+    priceUpdated: "Price updated automatically",
     trading: "Trading",
     portfolio: "Portfolio",
     history: "History",
@@ -145,10 +145,11 @@ const translations = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState('en'); // Default to English
+  const [language, setLanguage] = useState('fr'); // Défaut en français
 
   const t = (key: string): string => {
-    return translations[language as keyof typeof translations][key as keyof typeof translations.en] || key;
+    const currentTranslations = translations[language as keyof typeof translations];
+    return currentTranslations?.[key as keyof typeof currentTranslations] || key;
   };
 
   return (

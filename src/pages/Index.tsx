@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserCircle } from 'lucide-react';
+import { Search, UserCircle, Settings as SettingsIcon } from 'lucide-react';
 import TradingInterface from '@/components/TradingInterface';
 import PopularCryptos from '@/components/PopularCryptos';
 import Portfolio from '@/components/Portfolio';
@@ -12,6 +12,7 @@ import Settings from '@/components/Settings';
 import Auth from '@/components/Auth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/useAuth';
 import Footer from '@/components/Footer';
 
 interface CryptoData {
@@ -43,6 +44,7 @@ interface Transaction {
 const Index = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const [balance, setBalance] = useState(10000);
   const [positions, setPositions] = useState<Position[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -50,7 +52,8 @@ const Index = () => {
   const [contractAddress, setContractAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
-  const [user, setUser] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState('trading');
 
   useEffect(() => {
     // Calculate total portfolio value
@@ -100,12 +103,12 @@ const Index = () => {
         setTransactions([...transactions, transaction]);
 
         toast({
-          title: "Achat réussi !",
-          description: `Vous avez acheté ${amount} ${crypto} pour $${cost.toFixed(2)}`,
+          title: t('buySuccess'),
+          description: `${t('bought')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`,
         })
       } else {
         toast({
-          title: "Solde insuffisant",
+          title: t('insufficientBalance'),
           description: "Vous n'avez pas assez de fonds pour effectuer cet achat.",
           variant: "destructive",
         })
@@ -139,12 +142,12 @@ const Index = () => {
         setTransactions([...transactions, transaction]);
 
         toast({
-          title: "Vente réussie !",
-          description: `Vous avez vendu ${amount} ${crypto} pour $${cost.toFixed(2)}`,
+          title: t('sellSuccess'),
+          description: `${t('sold')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`,
         })
       } else {
         toast({
-          title: "Position insuffisante",
+          title: t('insufficientPosition'),
           description: "Vous n'avez pas assez de tokens pour effectuer cette vente.",
           variant: "destructive",
         })
@@ -168,7 +171,7 @@ const Index = () => {
         });
       } else {
         toast({
-          title: "Erreur",
+          title: t('error'),
           description: "Impossible de trouver la crypto avec cette adresse de contrat.",
           variant: "destructive",
         })
@@ -176,7 +179,7 @@ const Index = () => {
     } catch (error) {
       console.error('Erreur lors de la recherche de crypto:', error);
       toast({
-        title: "Erreur",
+        title: t('error'),
         description: "Une erreur s'est produite lors de la recherche de la crypto.",
         variant: "destructive",
       })
@@ -185,10 +188,18 @@ const Index = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       {/* Header */}
-      <header className="bg-black/20 backdrop-blur-sm border-b border-gray-700/50">
+      <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -196,94 +207,161 @@ const Index = () => {
                 <span className="text-white font-bold text-sm">S</span>
               </div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
-                ShibaVik.io
+                {t('title')}
               </h1>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm text-gray-300">Solde: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
+                <p className="text-sm text-gray-300">{t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
                 <p className="text-xs text-gray-400">Mode: Démo</p>
               </div>
+              
               <Button 
-                onClick={() => setShowAuth(!showAuth)}
+                onClick={() => setShowSettings(!showSettings)}
                 variant="outline"
-                className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10"
+                size="sm"
+                className="border-purple-400/50 text-purple-300 hover:bg-purple-500/10"
               >
-                <UserCircle className="h-4 w-4 mr-2" />
-                {user ? 'Profil' : 'Connexion'}
+                <SettingsIcon className="h-4 w-4" />
               </Button>
+              
+              {user ? (
+                <Button 
+                  onClick={handleSignOut}
+                  variant="outline"
+                  className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10"
+                >
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  {t('signOut')}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setShowAuth(!showAuth)}
+                  variant="outline"
+                  className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10"
+                >
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  {t('signIn')}
+                </Button>
+              )}
             </div>
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center space-x-6 mt-4">
+            <Button
+              variant={activeTab === 'trading' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('trading')}
+              className={activeTab === 'trading' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
+              {t('trading')}
+            </Button>
+            <Button
+              variant={activeTab === 'portfolio' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('portfolio')}
+              className={activeTab === 'portfolio' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
+              {t('portfolio')}
+            </Button>
+            <Button
+              variant={activeTab === 'history' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('history')}
+              className={activeTab === 'history' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
+              {t('history')}
+            </Button>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Settings Panel */}
-        <Settings 
-          demoBalance={balance}
-          onDemoBalanceChange={setBalance}
-          isDemo={true}
-        />
-
-        {/* Popular Cryptos */}
-        <PopularCryptos onSelectCrypto={setSelectedCrypto} />
-
-        {/* Meme Coin Search */}
-        <Card className="bg-gray-900/80 border-gray-700 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
-            <CardTitle className="flex items-center space-x-2 text-lg">
-              <Search className="h-5 w-5" />
-              <span>Rechercher une Meme Coin</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="flex space-x-4">
-              <Input
-                type="text"
-                placeholder="Adresse du contrat (ex: 7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr)"
-                value={contractAddress}
-                onChange={(e) => setContractAddress(e.target.value)}
-                className="flex-1 bg-gray-800 border-gray-600 text-white placeholder-gray-400"
-              />
-              <Button 
-                onClick={searchCrypto}
-                disabled={loading}
-                className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? 'Recherche...' : 'Rechercher'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Trading Interface */}
-        {selectedCrypto && (
-          <TradingInterface
-            cryptoData={selectedCrypto}
-            balance={balance}
-            onTrade={handleTrade}
-            positions={positions}
+        {showSettings && (
+          <Settings 
+            demoBalance={balance}
+            onDemoBalanceChange={setBalance}
+            isDemo={true}
           />
         )}
 
-        {/* Portfolio */}
-        <Portfolio
-          balance={balance}
-          positions={positions}
-          totalPortfolioValue={totalPortfolioValue}
-        />
+        {/* Content based on active tab */}
+        {activeTab === 'trading' && (
+          <>
+            {/* Popular Cryptos */}
+            <PopularCryptos onSelectCrypto={setSelectedCrypto} />
 
-        {/* Transaction History */}
-        {transactions.length > 0 && (
+            {/* Meme Coin Search */}
+            <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+              <CardHeader className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
+                <CardTitle className="flex items-center space-x-2 text-lg">
+                  <Search className="h-5 w-5" />
+                  <span>{t('searchCrypto')}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex space-x-4">
+                  <Input
+                    type="text"
+                    placeholder={t('contractAddress')}
+                    value={contractAddress}
+                    onChange={(e) => setContractAddress(e.target.value)}
+                    className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"
+                  />
+                  <Button 
+                    onClick={searchCrypto}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    {loading ? 'Recherche...' : t('search')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Trading Interface */}
+            {selectedCrypto ? (
+              <TradingInterface
+                cryptoData={selectedCrypto}
+                balance={balance}
+                onTrade={handleTrade}
+                positions={positions}
+              />
+            ) : (
+              <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+                <CardContent className="p-12 text-center">
+                  <p className="text-gray-400 text-lg">{t('searchToTrade')}</p>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+
+        {activeTab === 'portfolio' && (
+          <Portfolio
+            balance={balance}
+            positions={positions}
+            totalPortfolioValue={totalPortfolioValue}
+          />
+        )}
+
+        {activeTab === 'history' && transactions.length > 0 && (
           <TransactionHistory transactions={transactions} />
+        )}
+
+        {activeTab === 'history' && transactions.length === 0 && (
+          <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-400 text-lg">Aucune transaction pour le moment</p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Auth Panel */}
         {showAuth && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-700">
+            <div className="bg-gray-900/95 rounded-lg p-6 w-full max-w-md border border-gray-700">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-white">Connexion / Inscription</h2>
                 <Button 
