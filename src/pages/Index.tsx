@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -245,29 +246,63 @@ const Index = () => {
         }
       }
       
-      // Méthode 2: Recherche par adresse de contrat Ethereum
+      // Méthode 2: Recherche par adresse de contrat Ethereum ou Base
       if (!cryptoData && query.startsWith('0x') && query.length === 42) {
         try {
-          const response = await fetch(
-            `https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`
+          // Essai avec Base d'abord
+          const baseResponse = await fetch(
+            `https://api.dexscreener.com/latest/dex/tokens/${query}`,
+            {
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
+            }
           );
           
-          if (response.ok) {
-            const data = await response.json();
-            if (data.market_data && data.market_data.current_price) {
+          if (baseResponse.ok) {
+            const baseData = await baseResponse.json();
+            if (baseData.pairs && baseData.pairs.length > 0) {
+              // Prioriser les pairs sur Base
+              const basePair = baseData.pairs.find(pair => 
+                pair.chainId === 'base' || pair.chainId === '8453'
+              ) || baseData.pairs[0];
+              
               cryptoData = {
-                id: data.id,
-                symbol: data.symbol.toUpperCase(),
-                name: data.name,
-                current_price: data.market_data.current_price.usd || 0,
-                price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
+                id: query,
+                symbol: basePair.baseToken.symbol,
+                name: basePair.baseToken.name,
+                current_price: parseFloat(basePair.priceUsd) || 0,
+                price_change_percentage_24h: parseFloat(basePair.priceChange?.h24) || 0,
                 contract_address: query
               };
-              console.log('Token trouvé via CoinGecko (Ethereum):', cryptoData);
+              console.log('Token trouvé via DexScreener (Base/ETH):', cryptoData);
+            }
+          }
+          
+          // Si pas trouvé sur DexScreener, essayer CoinGecko pour Ethereum
+          if (!cryptoData) {
+            const response = await fetch(
+              `https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`
+            );
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.market_data && data.market_data.current_price) {
+                cryptoData = {
+                  id: data.id,
+                  symbol: data.symbol.toUpperCase(),
+                  name: data.name,
+                  current_price: data.market_data.current_price.usd || 0,
+                  price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
+                  contract_address: query
+                };
+                console.log('Token trouvé via CoinGecko (Ethereum):', cryptoData);
+              }
             }
           }
         } catch (error) {
-          console.log('Erreur CoinGecko Ethereum:', error);
+          console.log('Erreur recherche contrat:', error);
         }
       }
       
@@ -344,6 +379,7 @@ const Index = () => {
       toast({
         title: t('error'),
         description: `Impossible de trouver cette crypto. Essayez:
+• Adresse de contrat Base (0x...)
 • Adresse de contrat Solana (Pump.fun)
 • Adresse de contrat Ethereum (0x...)
 • Symbole (BTC, ETH, DOGE)
@@ -510,7 +546,7 @@ const Index = () => {
                 <div className="flex space-x-4">
                   <Input
                     type="text"
-                    placeholder="Contract address, symbol or name (e.g. BTC, ETH, 0x...)"
+                    placeholder="Contract address, symbol or name (e.g. 0xBC45647eA894030a4E9801Ec03479739FA2485F0, BTC, ETH)"
                     value={contractAddress}
                     onChange={(e) => setContractAddress(e.target.value)}
                     className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"

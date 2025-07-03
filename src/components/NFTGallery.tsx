@@ -9,41 +9,27 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const NFTGallery: React.FC = () => {
   const { t } = useLanguage();
 
-  // Sample NFT artworks data - in a real app this would come from an API
+  // NFT artworks data with real images
   const nftArtworks = [
     {
       id: 1,
       title: "Summer Era #001",
-      image: "/placeholder.svg",
-      description: "Digital art piece from ShibaVik Summer Era collection",
+      image: "/lovable-uploads/87473569-185c-4045-949f-dadb46c56d20.png",
+      description: "ShibaVik with blue lightning glasses - Digital art piece from Summer Era collection",
       openseaUrl: "https://opensea.io/collection/shibavik-summer-era/overview"
     },
     {
       id: 2,
       title: "Summer Era #002",
-      image: "/placeholder.svg",
-      description: "Unique cryptographic art representation",
+      image: "/lovable-uploads/2affb9d5-bdbd-4a23-9c9e-f0366645d4b6.png",
+      description: "ShibaVik with pink lightning glasses - Unique cryptographic art representation",
       openseaUrl: "https://opensea.io/collection/shibavik-summer-era/overview"
     },
     {
       id: 3,
       title: "Summer Era #003",
-      image: "/placeholder.svg",
-      description: "Abstract digital masterpiece",
-      openseaUrl: "https://opensea.io/collection/shibavik-summer-era/overview"
-    },
-    {
-      id: 4,
-      title: "Summer Era #004",
-      image: "/placeholder.svg",
-      description: "Contemporary NFT artwork",
-      openseaUrl: "https://opensea.io/collection/shibavik-summer-era/overview"
-    },
-    {
-      id: 5,
-      title: "Summer Era #005",
-      image: "/placeholder.svg",
-      description: "Limited edition digital creation",
+      image: "/lovable-uploads/5e98f41d-8ea6-4c97-b847-89fb4cea9de2.png",
+      description: "ShibaVik with magenta glasses - Abstract digital masterpiece",
       openseaUrl: "https://opensea.io/collection/shibavik-summer-era/overview"
     }
   ];
@@ -55,14 +41,14 @@ const NFTGallery: React.FC = () => {
         <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
           <CardTitle className="flex items-center space-x-2 text-xl">
             <ImageIcon className="h-6 w-6" />
-            <span>ShibaVik NFT Collection</span>
+            <span>Mint Now NFTs ShibaVik Summer Era</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Summer Era Collection</h2>
             <p className="text-gray-300 mb-4">
-              Discover unique digital artworks created by MS-ShibaVik. Each piece represents a moment in the Summer Era collection.
+              Discover unique digital artworks created by MS-ShibaVik. Each piece represents a moment in the Summer Era collection featuring the iconic ShibaVik character.
             </p>
             <Button
               onClick={() => window.open('https://opensea.io/collection/shibavik-summer-era/overview', '_blank')}
@@ -85,8 +71,12 @@ const NFTGallery: React.FC = () => {
                   <div className="p-2">
                     <Card className="bg-gray-800/80 border-gray-600 hover:bg-gray-700/80 transition-colors">
                       <CardContent className="p-4">
-                        <div className="aspect-square bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-lg mb-4 flex items-center justify-center border border-purple-500/30">
-                          <ImageIcon className="h-16 w-16 text-purple-400" />
+                        <div className="aspect-square rounded-lg mb-4 overflow-hidden border border-purple-500/30">
+                          <img 
+                            src={nft.image} 
+                            alt={nft.title}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         <h3 className="text-lg font-semibold text-white mb-2">{nft.title}</h3>
                         <p className="text-sm text-gray-300 mb-4">{nft.description}</p>
@@ -116,15 +106,15 @@ const NFTGallery: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div>
               <h3 className="text-lg font-semibold text-purple-400 mb-2">Unique Artworks</h3>
-              <p className="text-gray-300 text-sm">Each NFT is a one-of-a-kind digital creation</p>
+              <p className="text-gray-300 text-sm">Each NFT is a one-of-a-kind digital creation featuring ShibaVik</p>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-pink-400 mb-2">Summer Era Theme</h3>
-              <p className="text-gray-300 text-sm">Inspired by the vibrant energy of summer</p>
+              <p className="text-gray-300 text-sm">Inspired by the vibrant energy of summer and lightning aesthetics</p>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-cyan-400 mb-2">Blockchain Verified</h3>
-              <p className="text-gray-300 text-sm">Authentic ownership on the blockchain</p>
+              <p className="text-gray-300 text-sm">Authentic ownership on the blockchain via OpenSea</p>
             </div>
           </div>
         </CardContent>
