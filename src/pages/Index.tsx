@@ -378,7 +378,10 @@ const Index = () => {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
                   {t('title')}
                 </h1>
-                <p className="text-xs text-gray-400">{t('subtitle')}</p>
+                <div className="text-xs text-gray-400">
+                  <p>Simulator developed by MS-ShibaVik</p>
+                  <p>A Student Cryptography Enthousiast</p>
+                </div>
               </div>
               
               {/* Social Links */}
@@ -541,6 +544,10 @@ const Index = () => {
             balance={balance} 
             positions={positions} 
             totalPortfolioValue={totalPortfolioValue} 
+            onSelectCrypto={(crypto) => {
+              setSelectedCrypto(crypto);
+              setActiveTab('trading');
+            }}
           />
         )}
 

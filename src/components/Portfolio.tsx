@@ -15,15 +15,28 @@ interface PortfolioProps {
   balance: number;
   positions: Position[];
   totalPortfolioValue: number;
+  onSelectCrypto?: (crypto: { id: string; symbol: string; name: string; current_price: number; price_change_percentage_24h: number; }) => void;
 }
 
-const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfolioValue }) => {
+const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfolioValue, onSelectCrypto }) => {
   const { t } = useLanguage();
 
   const totalInvested = positions.reduce((sum, position) => sum + (position.amount * position.avgPrice), 0);
   const totalCurrentValue = positions.reduce((sum, position) => sum + (position.amount * position.currentPrice), 0);
   const totalPnL = totalCurrentValue - totalInvested;
   const totalPnLPercentage = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
+
+  const handlePositionClick = (position: Position) => {
+    if (onSelectCrypto) {
+      onSelectCrypto({
+        id: position.crypto.toLowerCase(),
+        symbol: position.crypto,
+        name: position.crypto,
+        current_price: position.currentPrice,
+        price_change_percentage_24h: 0
+      });
+    }
+  };
 
   if (positions.length === 0) {
     return (
@@ -108,7 +121,11 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
               const pnlPercentage = (pnl / investedValue) * 100;
 
               return (
-                <div key={index} className="bg-gray-800/80 rounded-lg p-4 border border-gray-700">
+                <div 
+                  key={index} 
+                  className="bg-gray-800/80 rounded-lg p-4 border border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                  onClick={() => handlePositionClick(position)}
+                >
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="text-lg font-semibold text-white">{position.crypto}</h3>
