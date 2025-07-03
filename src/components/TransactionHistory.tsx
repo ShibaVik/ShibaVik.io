@@ -1,7 +1,10 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+
 interface Transaction {
   id: string;
   type: 'buy' | 'sell';
@@ -11,39 +14,53 @@ interface Transaction {
   total: number;
   timestamp: Date;
 }
+
 interface TransactionHistoryProps {
   transactions: Transaction[];
 }
+
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   transactions
 }) => {
+  const { t } = useLanguage();
+
   if (transactions.length === 0) {
-    return <Card className="bg-gray-800/50 border-gray-700">
+    return (
+      <Card className="bg-gray-800/50 border-gray-700">
         <CardContent className="p-8 text-center">
           <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-400">Aucune transaction</p>
           <p className="text-sm text-gray-500">Vos trades apparaîtront ici</p>
         </CardContent>
-      </Card>;
+      </Card>
+    );
   }
-  return <Card className="bg-gray-800/50 border-gray-700">
+
+  return (
+    <Card className="bg-gray-800/50 border-gray-700">
       <CardHeader className="bg-slate-900">
         <CardTitle className="flex items-center space-x-2">
-          
-          <span className="text-slate-50">Historique des Transactions</span>
+          <span className="text-slate-50">{t('transactionHistory')}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="bg-slate-900">
         <div className="space-y-4">
-          {transactions.map(transaction => <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
+          {transactions.map(transaction => (
+            <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-700/50 rounded-lg">
               <div className="flex items-center space-x-4">
                 <div className={`p-2 rounded-full ${transaction.type === 'buy' ? 'bg-green-600/20' : 'bg-red-600/20'}`}>
-                  {transaction.type === 'buy' ? <TrendingUp className="h-4 w-4 text-green-400" /> : <TrendingDown className="h-4 w-4 text-red-400" />}
+                  {transaction.type === 'buy' ? 
+                    <TrendingUp className="h-4 w-4 text-green-400" /> : 
+                    <TrendingDown className="h-4 w-4 text-red-400" />
+                  }
                 </div>
                 
                 <div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant={transaction.type === 'buy' ? "default" : "destructive"} className={transaction.type === 'buy' ? "bg-green-600" : "bg-red-600"}>
+                    <Badge 
+                      variant={transaction.type === 'buy' ? "default" : "destructive"} 
+                      className={transaction.type === 'buy' ? "bg-green-600" : "bg-red-600"}
+                    >
                       {transaction.type === 'buy' ? 'ACHAT' : 'VENTE'}
                     </Badge>
                     <span className="font-semibold text-slate-50">{transaction.crypto}</span>
@@ -60,16 +77,19 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                 </p>
                 <p className="text-xs text-gray-400">
                   {new Intl.DateTimeFormat('fr-FR', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-              }).format(transaction.timestamp)}
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }).format(transaction.timestamp)}
                 </p>
               </div>
-            </div>)}
+            </div>
+          ))}
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default TransactionHistory;

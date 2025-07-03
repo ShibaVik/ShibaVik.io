@@ -14,6 +14,7 @@ export type Database = {
           amount: number
           avg_price: number
           contract_address: string | null
+          crypto_id: string | null
           crypto_name: string
           crypto_symbol: string
           current_price: number | null
@@ -25,6 +26,7 @@ export type Database = {
           amount: number
           avg_price: number
           contract_address?: string | null
+          crypto_id?: string | null
           crypto_name: string
           crypto_symbol: string
           current_price?: number | null
@@ -36,6 +38,7 @@ export type Database = {
           amount?: number
           avg_price?: number
           contract_address?: string | null
+          crypto_id?: string | null
           crypto_name?: string
           crypto_symbol?: string
           current_price?: number | null
@@ -85,6 +88,7 @@ export type Database = {
           amount: number
           contract_address: string | null
           created_at: string | null
+          crypto_id: string | null
           crypto_name: string
           crypto_symbol: string
           id: string
@@ -97,6 +101,7 @@ export type Database = {
           amount: number
           contract_address?: string | null
           created_at?: string | null
+          crypto_id?: string | null
           crypto_name: string
           crypto_symbol: string
           id?: string
@@ -109,6 +114,7 @@ export type Database = {
           amount?: number
           contract_address?: string | null
           created_at?: string | null
+          crypto_id?: string | null
           crypto_name?: string
           crypto_symbol?: string
           id?: string

@@ -1,171 +1,164 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+type Language = 'en' | 'fr';
 
 interface LanguageContextType {
-  language: string;
-  setLanguage: (lang: string) => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
   t: (key: string) => string;
 }
 
 const translations = {
   en: {
-    // Auth page
-    welcome: "Welcome to ShibaVik.io",
-    signIn: "Sign In",
-    signUp: "Sign Up",
-    email: "Email",
-    password: "Password",
-    confirmPassword: "Confirm Password",
-    dontHaveAccount: "Don't have an account?",
-    alreadyHaveAccount: "Already have an account?",
-    signInHere: "Sign in here",
-    signUpHere: "Sign up here",
-    loginSuccessful: "Login successful!",
-    checkEmailVerification: "Please check your email to verify your account before signing in.",
-    emailVerificationNote: "You will receive an email to verify your account.",
-    passwordsDoNotMatch: "Passwords do not match",
-    errorOccurred: "An error occurred",
-    
-    // Main app
+    // Header
     title: "ShibaVik.io",
-    subtitle: "MemeCoin Trading Simulator",
-    compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
-    developer: "Developed by ShibaVik Student - Cryptography Enthusiast",
-    demoMode: "Demo mode active - Sign in to save your trades permanently!",
+    subtitle: "Simulator developed by MS-ShibaVik A Student Cryptography Enthusiast",
     currentBalance: "Current Balance",
-    demoBalance: "Demo Balance",
-    initialBalance: "Initial Balance",
-    searchCrypto: "Search for a MemeCoin",
-    contractAddress: "Contract address (Solana, Ethereum, BSC...)",
-    search: "Search",
-    examples: "💡 Address examples:",
-    priceUpdated: "Price updated automatically",
-    popularCryptos: "Popular Cryptos",
+    signIn: "Sign In",
+    signOut: "Sign Out",
     trading: "Trading",
     portfolio: "Portfolio",
     history: "History",
+
+    // Popular Cryptos
+    popularCryptos: "Popular Cryptos",
+
+    // Search
+    searchCrypto: "Search Cryptocurrency",
+    search: "Search",
     searchToTrade: "Search for a cryptocurrency to start trading",
-    signOut: "Sign Out",
-    
+
     // Trading
-    buy: "BUY",
-    sell: "SELL",
+    buy: "Buy",
+    sell: "Sell",
     quantity: "Quantity",
-    amountInTokens: "Number of tokens",
-    amountInDollars: "Amount in USD",
-    unitPrice: "Unit price",
+    unitPrice: "Unit Price",
     total: "Total",
-    maximum: "Maximum",
+    maximum: "Max",
+    currentPrice: "Current Price",
     position: "Position",
-    avgPurchasePrice: "Average purchase price",
-    currentPrice: "Current price",
-    saleTotal: "Sale total",
-    
+    avgPurchasePrice: "Avg Purchase Price",
+    amountInTokens: "Amount in Tokens",
+    amountInDollars: "Amount in Dollars",
+
     // Portfolio
-    noPositions: "No open positions",
-    startTrading: "Start by buying some memecoins!",
     portfolioSummary: "Portfolio Summary",
     totalValue: "Total Value",
     totalCost: "Total Cost",
     totalPnL: "Total P&L",
-    
-    // Errors
-    error: "Error",
-    success: "Success",
-    insufficientBalance: "Insufficient balance",
-    insufficientPosition: "Insufficient position",
-    buySuccess: "Purchase successful",
-    sellSuccess: "Sale successful",
+    noPositions: "No positions yet",
+    startTrading: "Start trading to see your positions here",
+
+    // Transactions
+    transactionHistory: "Transaction History",
+
+    // Messages
+    buySuccess: "Purchase Successful",
+    sellSuccess: "Sale Successful",
     bought: "Bought",
     sold: "Sold",
-    for: "for"
+    for: "for",
+    insufficientBalance: "Insufficient Balance",
+    insufficientPosition: "Insufficient Position",
+    success: "Success",
+    error: "Error",
+
+    // Settings
+    settings: "Settings",
+    language: "Language",
+    english: "English",
+    french: "French",
+    demoBalance: "Demo Balance",
+    resetBalance: "Reset Balance"
   },
   fr: {
-    // Auth page
-    welcome: "Bienvenue sur ShibaVik.io",
-    signIn: "Se connecter",
-    signUp: "S'inscrire",
-    email: "Email",
-    password: "Mot de passe",
-    confirmPassword: "Confirmer le mot de passe",
-    dontHaveAccount: "Pas de compte ?",
-    alreadyHaveAccount: "Déjà un compte ?",
-    signInHere: "Connectez-vous ici",
-    signUpHere: "Inscrivez-vous ici",
-    loginSuccessful: "Connexion réussie !",
-    checkEmailVerification: "Veuillez vérifier votre email pour valider votre compte avant de vous connecter.",
-    emailVerificationNote: "Vous recevrez un email pour vérifier votre compte.",
-    passwordsDoNotMatch: "Les mots de passe ne correspondent pas",
-    errorOccurred: "Une erreur est survenue",
-    
-    // Main app
+    // Header
     title: "ShibaVik.io",
-    subtitle: "Simulateur de trading MemeCoin",
-    compatible: "⚡ Compatible pump.fun, DexScreener & DEX",
-    developer: "Développé par ShibaVik Student - Cryptography Enthusiast",
-    demoMode: "Mode démo actif - Connectez-vous pour sauvegarder vos trades en permanence !",
+    subtitle: "Simulateur développé par MS-ShibaVik Étudiant Passionné de Cryptographie",
     currentBalance: "Solde Actuel",
-    demoBalance: "Solde Démo",
-    initialBalance: "Solde Initial",
-    searchCrypto: "Rechercher une MemeCoin",
-    contractAddress: "Adresse du contrat (Solana, Ethereum, BSC...)",
-    search: "Rechercher",
-    examples: "💡 Exemples d'adresses :",
-    priceUpdated: "Prix actualisé automatiquement",
-    popularCryptos: "Cryptos Populaires",
+    signIn: "Se Connecter",
+    signOut: "Se Déconnecter",
     trading: "Trading",
     portfolio: "Portfolio",
     history: "Historique",
-    searchToTrade: "Recherchez une crypto-monnaie pour commencer à trader",
-    signOut: "Déconnexion",
-    
+
+    // Popular Cryptos
+    popularCryptos: "Cryptos Populaires",
+
+    // Search
+    searchCrypto: "Rechercher une Cryptomonnaie",
+    search: "Rechercher",
+    searchToTrade: "Recherchez une cryptomonnaie pour commencer à trader",
+
     // Trading
-    buy: "ACHETER",
-    sell: "VENDRE",
+    buy: "Acheter",
+    sell: "Vendre",
     quantity: "Quantité",
-    amountInTokens: "Nombre de tokens",
-    amountInDollars: "Montant en USD",
-    unitPrice: "Prix unitaire",
+    unitPrice: "Prix Unitaire",
     total: "Total",
-    maximum: "Maximum",
+    maximum: "Max",
+    currentPrice: "Prix Actuel",
     position: "Position",
-    avgPurchasePrice: "Prix d'achat moyen",
-    currentPrice: "Prix actuel",
-    saleTotal: "Total de vente",
-    
+    avgPurchasePrice: "Prix d'Achat Moyen",
+    amountInTokens: "Montant en Tokens",
+    amountInDollars: "Montant en Dollars",
+
     // Portfolio
-    noPositions: "Aucune position ouverte",
-    startTrading: "Commencez par acheter des memecoins!",
     portfolioSummary: "Résumé du Portfolio",
-    totalValue: "Valeur totale",
-    totalCost: "Coût total",
+    totalValue: "Valeur Totale",
+    totalCost: "Coût Total",
     totalPnL: "P&L Total",
-    
-    // Errors
-    error: "Erreur",
-    success: "Succès",
-    insufficientBalance: "Solde insuffisant",
-    insufficientPosition: "Position insuffisante",
-    buySuccess: "Achat réussi",
-    sellSuccess: "Vente réussie",
+    noPositions: "Aucune position pour le moment",
+    startTrading: "Commencez à trader pour voir vos positions ici",
+
+    // Transactions
+    transactionHistory: "Historique des Transactions",
+
+    // Messages
+    buySuccess: "Achat Réussi",
+    sellSuccess: "Vente Réussie",
     bought: "Acheté",
     sold: "Vendu",
-    for: "pour"
+    for: "pour",
+    insufficientBalance: "Solde Insuffisant",
+    insufficientPosition: "Position Insuffisante",
+    success: "Succès",
+    error: "Erreur",
+
+    // Settings
+    settings: "Paramètres",
+    language: "Langue",
+    english: "Anglais",
+    french: "Français",
+    demoBalance: "Solde Démo",
+    resetBalance: "Réinitialiser le Solde"
   }
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState('en'); // Langue par défaut anglais
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [language, setLanguage] = useState<Language>('en'); // Anglais par défaut
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('language') as Language;
+    if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'fr')) {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  const handleSetLanguage = (lang: Language) => {
+    setLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
 
   const t = (key: string): string => {
-    const currentTranslations = translations[language as keyof typeof translations];
-    return currentTranslations?.[key as keyof typeof currentTranslations] || key;
+    return translations[language][key as keyof typeof translations[typeof language]] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

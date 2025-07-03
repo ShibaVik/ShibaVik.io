@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import Auth from '@/components/Auth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
+import { useUserData } from '@/hooks/useUserData';
 import Footer from '@/components/Footer';
 
 interface CryptoData {
@@ -23,32 +25,25 @@ interface CryptoData {
   contract_address?: string;
 }
 
-interface Position {
-  crypto: string;
-  amount: number;
-  avgPrice: number;
-  currentPrice: number;
-}
-
-interface Transaction {
-  id: string;
-  type: 'buy' | 'sell';
-  crypto: string;
-  amount: number;
-  price: number;
-  total: number;
-  timestamp: Date;
-}
-
 const Index = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
-  const [balance, setBalance] = useState(10000);
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const { 
+    balance, 
+    positions, 
+    transactions, 
+    setBalance, 
+    setPositions, 
+    setTransactions,
+    saveTransaction,
+    updatePosition,
+    deletePosition,
+    updateBalance
+  } = useUserData();
+
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoData | null>(null);
-  const [contractAddress, setContractAddress] = useState('');
+  const [contractAddress, setContractAddress] = useState('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
   const [loading, setLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -63,7 +58,7 @@ const Index = () => {
 
   const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
 
-  const handleTrade = (type: 'buy' | 'sell', amount: number) => {
+  const handleTrade = async (type: 'buy' | 'sell', amount: number) => {
     if (!selectedCrypto) return;
     
     const crypto = selectedCrypto.symbol;
@@ -72,31 +67,57 @@ const Index = () => {
     
     if (type === 'buy') {
       if (balance >= cost) {
-        setBalance(balance - cost);
+        const newBalance = balance - cost;
+        
+        // Mettre à jour le solde
+        if (user) {
+          await updateBalance(newBalance);
+        } else {
+          setBalance(newBalance);
+        }
         
         const existingPosition = positions.find(p => p.crypto === crypto);
         if (existingPosition) {
           const newAmount = existingPosition.amount + amount;
           const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + cost) / newAmount;
-          setPositions(positions.map(p => 
+          const updatedPositions = positions.map(p => 
             p.crypto === crypto 
               ? { ...p, amount: newAmount, avgPrice: newAvgPrice, currentPrice: price }
               : p
-          ));
+          );
+          setPositions(updatedPositions);
+          
+          if (user) {
+            await updatePosition(crypto, newAmount, newAvgPrice, price);
+          }
         } else {
-          setPositions([...positions, { crypto, amount, avgPrice: price, currentPrice: price }]);
+          const newPosition = { crypto, amount, avgPrice: price, currentPrice: price };
+          setPositions([...positions, newPosition]);
+          
+          if (user) {
+            await updatePosition(crypto, amount, price, price);
+          }
         }
         
-        const transaction: Transaction = {
-          id: Math.random().toString(36).substring(7),
-          type: 'buy',
+        const transaction = {
+          type: 'buy' as const,
           crypto,
           amount,
           price,
-          total: cost,
+          total: cost
+        };
+        
+        const newTransaction = {
+          id: Math.random().toString(36).substring(7),
+          ...transaction,
           timestamp: new Date()
         };
-        setTransactions([...transactions, transaction]);
+        
+        setTransactions([newTransaction, ...transactions]);
+        
+        if (user) {
+          await saveTransaction(transaction);
+        }
         
         toast({
           title: t('buySuccess'),
@@ -112,29 +133,54 @@ const Index = () => {
     } else if (type === 'sell') {
       const existingPosition = positions.find(p => p.crypto === crypto);
       if (existingPosition && existingPosition.amount >= amount) {
-        setBalance(balance + cost);
+        const newBalance = balance + cost;
+        
+        // Mettre à jour le solde
+        if (user) {
+          await updateBalance(newBalance);
+        } else {
+          setBalance(newBalance);
+        }
         
         const newAmount = existingPosition.amount - amount;
         if (newAmount > 0) {
-          setPositions(positions.map(p => 
+          const updatedPositions = positions.map(p => 
             p.crypto === crypto 
               ? { ...p, amount: newAmount, currentPrice: price }
               : p
-          ));
+          );
+          setPositions(updatedPositions);
+          
+          if (user) {
+            await updatePosition(crypto, newAmount, existingPosition.avgPrice, price);
+          }
         } else {
           setPositions(positions.filter(p => p.crypto !== crypto));
+          
+          if (user) {
+            await deletePosition(crypto);
+          }
         }
         
-        const transaction: Transaction = {
-          id: Math.random().toString(36).substring(7),
-          type: 'sell',
+        const transaction = {
+          type: 'sell' as const,
           crypto,
           amount,
           price,
-          total: cost,
+          total: cost
+        };
+        
+        const newTransaction = {
+          id: Math.random().toString(36).substring(7),
+          ...transaction,
           timestamp: new Date()
         };
-        setTransactions([...transactions, transaction]);
+        
+        setTransactions([newTransaction, ...transactions]);
+        
+        if (user) {
+          await saveTransaction(transaction);
+        }
         
         toast({
           title: t('sellSuccess'),
@@ -169,7 +215,6 @@ const Index = () => {
       // Méthode 1: Recherche par adresse de contrat Solana (format Pump.fun)
       if (query.length > 30 && !query.startsWith('0x')) {
         try {
-          // Essayer d'abord avec DexScreener API pour Solana
           const dexResponse = await fetch(
             `https://api.dexscreener.com/latest/dex/tokens/${query}`,
             {
@@ -329,9 +374,12 @@ const Index = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">S</span>
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
-                {t('title')}
-              </h1>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+                  {t('title')}
+                </h1>
+                <p className="text-xs text-gray-400">{t('subtitle')}</p>
+              </div>
               
               {/* Social Links */}
               <div className="hidden md:flex items-center space-x-2 ml-4">
@@ -429,7 +477,7 @@ const Index = () => {
           <div className="fixed top-20 right-4 z-40">
             <Settings 
               demoBalance={balance} 
-              onDemoBalanceChange={setBalance} 
+              onDemoBalanceChange={user ? updateBalance : setBalance} 
               isDemo={!user} 
             />
           </div>
@@ -453,7 +501,7 @@ const Index = () => {
                 <div className="flex space-x-4">
                   <Input
                     type="text"
-                    placeholder="Adresse de contrat, symbole ou nom (ex: KMnDBXcPXoz6oMJW5XG4tXdwSWpmWEP2RQM1Uujpump)"
+                    placeholder="Contract address, symbol or name (e.g. 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)"
                     value={contractAddress}
                     onChange={(e) => setContractAddress(e.target.value)}
                     className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"
