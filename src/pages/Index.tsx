@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import TradingInterface from '@/components/TradingInterface';
 import PopularCryptos from '@/components/PopularCryptos';
 import Portfolio from '@/components/Portfolio';
 import TransactionHistory from '@/components/TransactionHistory';
+import NFTGallery from '@/components/NFTGallery';
 import Settings from '@/components/Settings';
 import Auth from '@/components/Auth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -43,7 +43,7 @@ const Index = () => {
   } = useUserData();
 
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoData | null>(null);
-  const [contractAddress, setContractAddress] = useState('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
+  const [contractAddress, setContractAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -380,7 +380,6 @@ const Index = () => {
                 </h1>
                 <div className="text-xs text-gray-400">
                   <p>Simulator developed by MS-ShibaVik</p>
-                  <p>A Student Cryptography Enthousiast</p>
                 </div>
               </div>
               
@@ -470,6 +469,13 @@ const Index = () => {
             >
               {t('history')}
             </Button>
+            <Button 
+              variant={activeTab === 'nft' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('nft')}
+              className={activeTab === 'nft' ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white' : 'text-gray-300 hover:text-white'}
+            >
+              NFT
+            </Button>
           </div>
         </div>
       </header>
@@ -504,7 +510,7 @@ const Index = () => {
                 <div className="flex space-x-4">
                   <Input
                     type="text"
-                    placeholder="Contract address, symbol or name (e.g. 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)"
+                    placeholder="Contract address, symbol or name (e.g. BTC, ETH, 0x...)"
                     value={contractAddress}
                     onChange={(e) => setContractAddress(e.target.value)}
                     className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400"
@@ -561,6 +567,10 @@ const Index = () => {
               <p className="text-gray-400 text-lg">Aucune transaction pour le moment</p>
             </CardContent>
           </Card>
+        )}
+
+        {activeTab === 'nft' && (
+          <NFTGallery />
         )}
 
         {/* Auth Panel */}
