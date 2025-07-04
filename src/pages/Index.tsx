@@ -388,9 +388,9 @@ const Index = () => {
                 <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
                   <Linkedin className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
                 </a>
-                <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="OpenSea">
+                <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors px-[8px]">
                   <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
-                    <span className="text-white mx-0 font-bold text-xs">OpenSea</span>
+                    <span className="text-white mx-0 font-bold text-xs">OS</span>
                   </div>
                 </a>
                 <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
