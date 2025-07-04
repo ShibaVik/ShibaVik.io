@@ -4,23 +4,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Globe, DollarSign } from 'lucide-react';
+import { Globe, DollarSign, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface SettingsProps {
   demoBalance: number;
   onDemoBalanceChange: (balance: number) => void;
+  onResetAccount: () => void;
   isDemo: boolean;
 }
 
 const Settings: React.FC<SettingsProps> = ({
   demoBalance,
   onDemoBalanceChange,
+  onResetAccount,
   isDemo
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const [newBalance, setNewBalance] = useState(demoBalance.toString());
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleBalanceUpdate = () => {
     const balance = parseFloat(newBalance);
@@ -29,9 +32,19 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
+  const handleResetAccount = () => {
+    if (showResetConfirm) {
+      onResetAccount();
+      setShowResetConfirm(false);
+    } else {
+      setShowResetConfirm(true);
+      setTimeout(() => setShowResetConfirm(false), 5000);
+    }
+  };
+
   return (
-    <Card className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border-purple-500/30 backdrop-blur-sm bg-slate-900 py-0">
-      <CardContent className="p-4 space-y-4 bg-slate-900 py-[16px] my-0">
+    <Card className="bg-gradient-to-br from-purple-900/20 to-blue-900/20 border-purple-500/30 backdrop-blur-sm bg-slate-900">
+      <CardContent className="p-4 space-y-4 bg-slate-900">
         {/* Language Selection */}
         <div className="flex items-center space-x-3">
           <Globe className="h-4 w-4 text-blue-400" />
@@ -47,7 +60,7 @@ const Settings: React.FC<SettingsProps> = ({
           </Select>
         </div>
 
-        {/* Demo Balance (show for both demo and connected users) */}
+        {/* Demo Balance */}
         <div className="flex items-center space-x-3">
           <DollarSign className="h-4 w-4 text-green-400" />
           <Label className="text-gray-200 text-sm">
@@ -70,6 +83,27 @@ const Settings: React.FC<SettingsProps> = ({
             </Button>
           </div>
         </div>
+
+        {/* Reset Account - Only show for demo mode */}
+        {isDemo && (
+          <div className="flex items-center space-x-3 pt-2 border-t border-gray-700/50">
+            <AlertTriangle className="h-4 w-4 text-orange-400" />
+            <Label className="text-gray-200 text-sm">Réinitialiser le compte</Label>
+            <Button
+              onClick={handleResetAccount}
+              size="sm"
+              variant={showResetConfirm ? "destructive" : "outline"}
+              className={`h-8 px-3 text-xs ${
+                showResetConfirm 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'border-orange-400/50 text-orange-400 hover:bg-orange-500/10'
+              }`}
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              {showResetConfirm ? 'Confirmer' : 'Reset'}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

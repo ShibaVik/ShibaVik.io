@@ -16,7 +16,14 @@ interface CryptoData {
   contract_address?: string;
 }
 
-export const usePriceSync = (crypto: CryptoData | null) => {
+interface Position {
+  crypto: string;
+  amount: number;
+  avgPrice: number;
+  currentPrice: number;
+}
+
+export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) => {
   const [priceHistory, setPriceHistory] = useState<PriceData[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -56,10 +63,8 @@ export const usePriceSync = (crypto: CryptoData | null) => {
       let url = '';
       
       if (contractAddress && contractAddress.startsWith('0x')) {
-        // Contract Ethereum/Base
         url = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`;
       } else if (cryptoId) {
-        // ID direct
         url = `https://api.coingecko.com/api/v3/coins/${cryptoId}`;
       }
       
@@ -84,7 +89,6 @@ export const usePriceSync = (crypto: CryptoData | null) => {
 
   const fetchFromPumpFun = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
     try {
-      // Pump.fun via DexScreener pour Solana
       if (contractAddress.length > 30 && !contractAddress.startsWith('0x')) {
         const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
           headers: {
@@ -120,19 +124,15 @@ export const usePriceSync = (crypto: CryptoData | null) => {
     setIsUpdating(true);
     const sources: Promise<PriceData | null>[] = [];
 
-    // Ajouter les sources selon le type de crypto
     if (crypto.contract_address) {
       if (crypto.contract_address.startsWith('0x')) {
-        // Ethereum/Base token
         sources.push(fetchFromDexScreener(crypto.contract_address));
         sources.push(fetchFromCoinGecko(crypto.id, crypto.contract_address));
       } else if (crypto.contract_address.length > 30) {
-        // Solana token (Pump.fun)
         sources.push(fetchFromPumpFun(crypto.contract_address));
         sources.push(fetchFromDexScreener(crypto.contract_address));
       }
     } else if (crypto.id) {
-      // Crypto populaire
       sources.push(fetchFromCoinGecko(crypto.id));
     }
 
@@ -147,17 +147,14 @@ export const usePriceSync = (crypto: CryptoData | null) => {
       });
 
       if (validPrices.length > 0) {
-        // Prendre le prix le plus récent ou faire une moyenne
         const latestPrice = validPrices.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-        
-        // Vérifier la cohérence des prix (pas plus de 5% d'écart)
         const avgPrice = validPrices.reduce((sum, p) => sum + p.price, 0) / validPrices.length;
         const priceToUse = Math.abs(latestPrice.price - avgPrice) / avgPrice < 0.05 ? latestPrice.price : avgPrice;
 
         setCurrentPrice(priceToUse);
         setPriceSource(latestPrice.source);
         setLastUpdate(new Date());
-        setPriceHistory(prev => [latestPrice, ...prev.slice(0, 9)]); // Garder 10 derniers prix
+        setPriceHistory(prev => [latestPrice, ...prev.slice(0, 9)]);
 
         console.log(`Prix synchronisé pour ${crypto.symbol}: $${priceToUse} (${latestPrice.source})`);
       }
@@ -171,15 +168,11 @@ export const usePriceSync = (crypto: CryptoData | null) => {
   useEffect(() => {
     if (!crypto) return;
 
-    // Synchronisation immédiate
     syncPrices();
-
-    // Synchronisation périodique toutes les 15 secondes pour les memecoins
     const interval = setInterval(syncPrices, 15000);
     return () => clearInterval(interval);
   }, [crypto, syncPrices]);
 
-  // Fonction pour vérifier la cohérence des prix
   const isPriceConsistent = useCallback(() => {
     if (priceHistory.length < 2) return true;
     
@@ -187,7 +180,7 @@ export const usePriceSync = (crypto: CryptoData | null) => {
     const maxPrice = Math.max(...recent.map(p => p.price));
     const minPrice = Math.min(...recent.map(p => p.price));
     
-    return (maxPrice - minPrice) / minPrice < 0.1; // Moins de 10% d'écart
+    return (maxPrice - minPrice) / minPrice < 0.1;
   }, [priceHistory]);
 
   return {

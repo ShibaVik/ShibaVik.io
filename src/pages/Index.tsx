@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, UserCircle, Settings as SettingsIcon, Github, Linkedin } from 'lucide-react';
+import { Search, UserCircle, Settings as SettingsIcon } from 'lucide-react';
 import TradingInterface from '@/components/TradingInterface';
 import PopularCryptos from '@/components/PopularCryptos';
 import Portfolio from '@/components/Portfolio';
@@ -10,6 +10,7 @@ import TransactionHistory from '@/components/TransactionHistory';
 import NFTGallery from '@/components/NFTGallery';
 import Settings from '@/components/Settings';
 import Auth from '@/components/Auth';
+import SiteHeader from '@/components/SiteHeader';
 import MobileHeader from '@/components/MobileHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
@@ -54,8 +55,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('trading');
   const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
 
-  // Utiliser le nouveau hook de synchronisation des prix
-  const { currentPrice, lastUpdate, isUpdating, priceSource, isPriceConsistent } = usePriceSync(selectedCrypto);
+  // Utiliser le hook de synchronisation des prix avec les positions
+  const { currentPrice, lastUpdate, isUpdating, priceSource, isPriceConsistent } = usePriceSync(selectedCrypto, positions);
 
   // Synchroniser le prix dans selectedCrypto avec le prix mis à jour
   useEffect(() => {
@@ -67,12 +68,26 @@ const Index = () => {
   // Calculer la valeur totale du portfolio avec synchronisation P&L
   useEffect(() => {
     const portfolioValue = positions.reduce((sum, position) => {
-      // Utiliser le prix actuel si disponible, sinon le prix stocké
       const price = selectedCrypto?.symbol === position.crypto ? currentPrice : position.currentPrice;
       return sum + position.amount * price;
     }, 0);
     setTotalPortfolioValue(balance + portfolioValue);
   }, [balance, positions, currentPrice, selectedCrypto]);
+
+  // Fonction pour réinitialiser complètement le compte démo
+  const handleResetAccount = () => {
+    setBalance(10000);
+    setPositions([]);
+    setTransactions([]);
+    setSelectedCrypto(null);
+    setContractAddress('');
+    setActiveTab('trading');
+    
+    toast({
+      title: "Compte réinitialisé",
+      description: "Votre compte démo a été remis à zéro avec $10,000",
+    });
+  };
 
   const handleTrade = async (type: 'buy' | 'sell', amount: number) => {
     if (!selectedCrypto) return;
@@ -225,7 +240,6 @@ const Index = () => {
       const query = contractAddress.toLowerCase().trim();
       let cryptoData = null;
 
-      // Méthode 1: Recherche par adresse de contrat Solana (format Pump.fun)
       if (query.length > 30 && !query.startsWith('0x')) {
         try {
           const dexResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${query}`, {
@@ -246,7 +260,6 @@ const Index = () => {
                 price_change_percentage_24h: parseFloat(pair.priceChange?.h24) || 0,
                 contract_address: query
               };
-              console.log('Token trouvé via DexScreener:', cryptoData);
             }
           }
         } catch (error) {
@@ -256,12 +269,7 @@ const Index = () => {
 
       if (!cryptoData && query.startsWith('0x') && query.length === 42) {
         try {
-          const baseResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${query}`, {
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
+          const baseResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${query}`);
           if (baseResponse.ok) {
             const baseData = await baseResponse.json();
             if (baseData.pairs && baseData.pairs.length > 0) {
@@ -274,7 +282,6 @@ const Index = () => {
                 price_change_percentage_24h: parseFloat(basePair.priceChange?.h24) || 0,
                 contract_address: query
               };
-              console.log('Token trouvé via DexScreener (Base/ETH):', cryptoData);
             }
           }
 
@@ -291,7 +298,6 @@ const Index = () => {
                   price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
                   contract_address: query
                 };
-                console.log('Token trouvé via CoinGecko (Ethereum):', cryptoData);
               }
             }
           }
@@ -314,7 +320,6 @@ const Index = () => {
                 price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
                 contract_address: contractAddress
               };
-              console.log('Token trouvé via CoinGecko (ID):', cryptoData);
             }
           }
         } catch (error) {
@@ -341,7 +346,6 @@ const Index = () => {
                     price_change_percentage_24h: data.market_data.price_change_percentage_24h || 0,
                     contract_address: contractAddress
                   };
-                  console.log('Token trouvé via recherche CoinGecko:', cryptoData);
                 }
               }
             }
@@ -388,7 +392,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
-      {/* Header */}
+      {/* Site Header - Always visible at the top */}
+      <SiteHeader />
+
+      {/* Navigation Header */}
       <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           {isMobile ? (
@@ -401,38 +408,6 @@ const Index = () => {
             />
           ) : (
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 min-w-0 flex-1">
-                <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
-                    {t('title')}
-                  </h1>
-                  <div className="text-xs text-gray-400">
-                    <p className="truncate">{t('footerText')}</p>
-                  </div>
-                </div>
-                
-                {/* Social Links - Desktop */}
-                <div className="flex items-center space-x-2">
-                  <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
-                    <span className="text-gray-300 hover:text-cyan-400 text-base">𝕏</span>
-                  </a>
-                  <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
-                    <Linkedin className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
-                  </a>
-                  <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors">
-                    <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
-                      <span className="text-white font-bold text-xs">OS</span>
-                    </div>
-                  </a>
-                  <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
-                    <Github className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
-                  </a>
-                </div>
-              </div>
-              
               <div className="flex items-center space-x-4">
                 <div className="text-right">
                   <p className="text-sm text-gray-300">
@@ -506,8 +481,13 @@ const Index = () => {
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Settings Panel */}
         {showSettings && (
-          <div className="fixed top-16 sm:top-20 right-2 sm:right-4 z-40 w-[calc(100vw-16px)] sm:w-auto max-w-sm">
-            <Settings demoBalance={balance} onDemoBalanceChange={user ? updateBalance : setBalance} isDemo={!user} />
+          <div className="fixed top-32 sm:top-36 right-2 sm:right-4 z-40 w-[calc(100vw-16px)] sm:w-auto max-w-sm">
+            <Settings 
+              demoBalance={balance} 
+              onDemoBalanceChange={user ? updateBalance : setBalance} 
+              onResetAccount={handleResetAccount}
+              isDemo={!user} 
+            />
           </div>
         )}
 
@@ -555,6 +535,8 @@ const Index = () => {
                 positions={positions}
                 lastUpdate={lastUpdate}
                 isUpdating={isUpdating}
+                priceSource={priceSource}
+                isPriceConsistent={isPriceConsistent}
               />
             ) : (
               <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
