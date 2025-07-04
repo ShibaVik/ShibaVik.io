@@ -55,7 +55,7 @@ const fallbackCryptos: CryptoData[] = [
 ];
 
 const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [cryptos, setCryptos] = useState<CryptoData[]>(fallbackCryptos);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -64,7 +64,7 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
     // Charger immédiatement avec les données de fallback
     fetchPopularCryptos();
     
-    // Puis actualiser périodiquement
+    // Puis actualiser périodiquement toutes les 30 secondes
     const interval = setInterval(fetchPopularCryptos, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -76,7 +76,7 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
       
       // Utiliser un timeout pour éviter les blocages
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
       const response = await fetch(
         `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${cryptoIds.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`,
@@ -110,15 +110,15 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
   return (
     <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between text-white">
+        <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between text-white gap-2">
           <div className="flex items-center space-x-2">
             <Star className="h-5 w-5 text-yellow-400" />
-            <span>{t('popularCryptos')}</span>
+            <span className="text-lg sm:text-xl">{t('popularCryptos')}</span>
           </div>
           <div className="flex items-center space-x-2">
             {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cyan-400"></div>}
             <span className="text-xs text-green-400">
-              ⚡ {new Intl.DateTimeFormat('fr-FR', {
+              ⚡ {t('lastUpdate')}: {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
                 hour: '2-digit',
                 minute: '2-digit'
               }).format(lastUpdate)}
@@ -127,31 +127,31 @@ const PopularCryptos: React.FC<PopularCryptosProps> = ({ onSelectCrypto }) => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {cryptos.map((crypto) => (
             <Button
               key={crypto.id}
               onClick={() => onSelectCrypto(crypto)}
               variant="outline"
-              className="bg-gray-800/80 border-gray-600 hover:bg-gray-700/80 text-white p-4 h-auto flex flex-col items-center space-y-2 transition-all duration-200 hover:border-cyan-400/50"
+              className="bg-gray-800/80 border-gray-600 hover:bg-gray-700/80 text-white p-3 sm:p-4 h-auto flex flex-col items-center space-y-2 transition-all duration-200 hover:border-cyan-400/50"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 w-full">
                 <img 
                   src={crypto.image} 
                   alt={crypto.name} 
-                  className="w-6 h-6"
+                  className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-                <div className="text-left">
-                  <p className="font-semibold text-sm">{crypto.symbol.toUpperCase()}</p>
-                  <p className="text-xs text-gray-400">{crypto.name}</p>
+                <div className="text-left min-w-0 flex-1">
+                  <p className="font-semibold text-xs sm:text-sm truncate">{crypto.symbol.toUpperCase()}</p>
+                  <p className="text-xs text-gray-400 truncate">{crypto.name}</p>
                 </div>
               </div>
               
               <div className="text-center w-full">
-                <p className="font-bold text-white">${crypto.current_price.toLocaleString()}</p>
+                <p className="font-bold text-white text-sm sm:text-base">${crypto.current_price.toLocaleString()}</p>
                 <div className={`flex items-center justify-center space-x-1 ${
                   crypto.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
                 }`}>

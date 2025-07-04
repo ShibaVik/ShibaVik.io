@@ -20,14 +20,19 @@ const translations = {
     trading: "Trading",
     portfolio: "Portfolio",
     history: "History",
+    connected: "Connected",
+    demo: "Demo",
 
     // Popular Cryptos
     popularCryptos: "Popular Cryptos",
+    lastUpdate: "Last Update",
 
     // Search
     searchCrypto: "Search Cryptocurrency",
     search: "Search",
     searchToTrade: "Search for a cryptocurrency to start trading",
+    searching: "Searching...",
+    contractPlaceholder: "Contract address, symbol or name (e.g. 0xBC45647eA894030a4E9801Ec03479739FA2485F0, BTC, ETH)",
 
     // Trading
     buy: "Buy",
@@ -41,6 +46,8 @@ const translations = {
     avgPurchasePrice: "Avg Purchase Price",
     amountInTokens: "Amount in Tokens",
     amountInDollars: "Amount in Dollars",
+    inputMode: "Input Mode",
+    currentValue: "Current Value",
 
     // Portfolio
     portfolioSummary: "Portfolio Summary",
@@ -49,9 +56,16 @@ const translations = {
     totalPnL: "Total P&L",
     noPositions: "No positions yet",
     startTrading: "Start trading to see your positions here",
+    positions: "Positions",
+    investedValue: "Invested Value",
 
     // Transactions
     transactionHistory: "Transaction History",
+    noTransactions: "No transactions yet",
+
+    // NFT
+    nftTitle: "Mint Now NFTs ShibaVik Summer Era",
+    viewOnOpenSea: "View on OpenSea",
 
     // Messages
     buySuccess: "Purchase Successful",
@@ -63,6 +77,10 @@ const translations = {
     insufficientPosition: "Insufficient Position",
     success: "Success",
     error: "Error",
+    notEnoughFunds: "You don't have enough funds for this purchase.",
+    notEnoughTokens: "You don't have enough tokens for this sale.",
+    cryptoFound: "found successfully!",
+    cryptoNotFound: "Unable to find this crypto. Try:",
 
     // Settings
     settings: "Settings",
@@ -70,7 +88,12 @@ const translations = {
     english: "English",
     french: "French",
     demoBalance: "Demo Balance",
-    resetBalance: "Reset Balance"
+    resetBalance: "Reset Balance",
+    authentication: "Authentication",
+
+    // Footer
+    footerText: "Simulator developed by MS-ShibaVik",
+    footerSubtext: "Educational purpose only - Not financial advice"
   },
   fr: {
     // Header
@@ -82,14 +105,19 @@ const translations = {
     trading: "Trading",
     portfolio: "Portfolio",
     history: "Historique",
+    connected: "Connecté",
+    demo: "Démo",
 
     // Popular Cryptos
     popularCryptos: "Cryptos Populaires",
+    lastUpdate: "Dernière MàJ",
 
     // Search
     searchCrypto: "Rechercher une Cryptomonnaie",
     search: "Rechercher",
     searchToTrade: "Recherchez une cryptomonnaie pour commencer à trader",
+    searching: "Recherche en cours...",
+    contractPlaceholder: "Adresse de contrat, symbole ou nom (ex: 0xBC45647eA894030a4E9801Ec03479739FA2485F0, BTC, ETH)",
 
     // Trading
     buy: "Acheter",
@@ -103,6 +131,8 @@ const translations = {
     avgPurchasePrice: "Prix d'Achat Moyen",
     amountInTokens: "Montant en Tokens",
     amountInDollars: "Montant en Dollars",
+    inputMode: "Mode de saisie",
+    currentValue: "Valeur actuelle",
 
     // Portfolio
     portfolioSummary: "Résumé du Portfolio",
@@ -111,9 +141,16 @@ const translations = {
     totalPnL: "P&L Total",
     noPositions: "Aucune position pour le moment",
     startTrading: "Commencez à trader pour voir vos positions ici",
+    positions: "Positions",
+    investedValue: "Valeur investie",
 
     // Transactions
     transactionHistory: "Historique des Transactions",
+    noTransactions: "Aucune transaction pour le moment",
+
+    // NFT
+    nftTitle: "Mint Now NFTs ShibaVik Summer Era",
+    viewOnOpenSea: "Voir sur OpenSea",
 
     // Messages
     buySuccess: "Achat Réussi",
@@ -125,6 +162,10 @@ const translations = {
     insufficientPosition: "Position Insuffisante",
     success: "Succès",
     error: "Erreur",
+    notEnoughFunds: "Vous n'avez pas assez de fonds pour effectuer cet achat.",
+    notEnoughTokens: "Vous n'avez pas assez de tokens pour effectuer cette vente.",
+    cryptoFound: "trouvé avec succès!",
+    cryptoNotFound: "Impossible de trouver cette crypto. Essayez:",
 
     // Settings
     settings: "Paramètres",
@@ -132,7 +173,12 @@ const translations = {
     english: "Anglais",
     french: "Français",
     demoBalance: "Solde Démo",
-    resetBalance: "Réinitialiser le Solde"
+    resetBalance: "Réinitialiser le Solde",
+    authentication: "Authentification",
+
+    // Footer
+    footerText: "Simulateur développé par MS-ShibaVik",
+    footerSubtext: "À des fins éducatives uniquement - Pas de conseils financiers"
   }
 };
 

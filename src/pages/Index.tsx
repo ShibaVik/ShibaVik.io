@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
 import { useUserData } from '@/hooks/useUserData';
+import { useCryptoPrice } from '@/hooks/useCryptoPrice';
 import Footer from '@/components/Footer';
+
 interface CryptoData {
   id: string;
   symbol: string;
@@ -23,17 +26,11 @@ interface CryptoData {
   price_change_percentage_24h: number;
   contract_address?: string;
 }
+
 const Index = () => {
-  const {
-    t
-  } = useLanguage();
-  const {
-    toast
-  } = useToast();
-  const {
-    user,
-    signOut
-  } = useAuth();
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const { user, signOut } = useAuth();
   const {
     balance,
     positions,
@@ -46,44 +43,64 @@ const Index = () => {
     deletePosition,
     updateBalance
   } = useUserData();
+
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoData | null>(null);
   const [contractAddress, setContractAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState('trading');
+  const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
+
+  // Utiliser le hook pour mettre à jour le prix du crypto sélectionné
+  const { currentPrice, lastUpdate, isUpdating } = useCryptoPrice(selectedCrypto);
+
+  // Synchroniser le prix dans selectedCrypto avec le prix mis à jour
+  useEffect(() => {
+    if (selectedCrypto && currentPrice && currentPrice !== selectedCrypto.current_price) {
+      setSelectedCrypto(prev => prev ? { ...prev, current_price: currentPrice } : null);
+    }
+  }, [currentPrice, selectedCrypto]);
+
+  // Calculer la valeur totale du portfolio avec synchronisation P&L
   useEffect(() => {
     const portfolioValue = positions.reduce((sum, position) => {
-      return sum + position.amount * position.currentPrice;
+      // Utiliser le prix actuel si disponible, sinon le prix stocké
+      const price = selectedCrypto?.symbol === position.crypto ? currentPrice : position.currentPrice;
+      return sum + position.amount * price;
     }, 0);
     setTotalPortfolioValue(balance + portfolioValue);
-  }, [balance, positions]);
-  const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
+  }, [balance, positions, currentPrice, selectedCrypto]);
+
   const handleTrade = async (type: 'buy' | 'sell', amount: number) => {
     if (!selectedCrypto) return;
+
     const crypto = selectedCrypto.symbol;
-    const price = selectedCrypto.current_price;
+    const price = currentPrice || selectedCrypto.current_price;
     const cost = amount * price;
+
     if (type === 'buy') {
       if (balance >= cost) {
         const newBalance = balance - cost;
 
-        // Mettre à jour le solde
         if (user) {
           await updateBalance(newBalance);
         } else {
           setBalance(newBalance);
         }
+
         const existingPosition = positions.find(p => p.crypto === crypto);
         if (existingPosition) {
           const newAmount = existingPosition.amount + amount;
           const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + cost) / newAmount;
-          const updatedPositions = positions.map(p => p.crypto === crypto ? {
-            ...p,
-            amount: newAmount,
-            avgPrice: newAvgPrice,
-            currentPrice: price
-          } : p);
+          const updatedPositions = positions.map(p => 
+            p.crypto === crypto ? {
+              ...p,
+              amount: newAmount,
+              avgPrice: newAvgPrice,
+              currentPrice: price
+            } : p
+          );
           setPositions(updatedPositions);
           if (user) {
             await updatePosition(crypto, newAmount, newAvgPrice, price);
@@ -100,6 +117,7 @@ const Index = () => {
             await updatePosition(crypto, amount, price, price);
           }
         }
+
         const transaction = {
           type: 'buy' as const,
           crypto,
@@ -116,6 +134,7 @@ const Index = () => {
         if (user) {
           await saveTransaction(transaction);
         }
+
         toast({
           title: t('buySuccess'),
           description: `${t('bought')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
@@ -123,7 +142,7 @@ const Index = () => {
       } else {
         toast({
           title: t('insufficientBalance'),
-          description: "Vous n'avez pas assez de fonds pour effectuer cet achat.",
+          description: t('notEnoughFunds'),
           variant: "destructive"
         });
       }
@@ -132,19 +151,21 @@ const Index = () => {
       if (existingPosition && existingPosition.amount >= amount) {
         const newBalance = balance + cost;
 
-        // Mettre à jour le solde
         if (user) {
           await updateBalance(newBalance);
         } else {
           setBalance(newBalance);
         }
+
         const newAmount = existingPosition.amount - amount;
         if (newAmount > 0) {
-          const updatedPositions = positions.map(p => p.crypto === crypto ? {
-            ...p,
-            amount: newAmount,
-            currentPrice: price
-          } : p);
+          const updatedPositions = positions.map(p => 
+            p.crypto === crypto ? {
+              ...p,
+              amount: newAmount,
+              currentPrice: price
+            } : p
+          );
           setPositions(updatedPositions);
           if (user) {
             await updatePosition(crypto, newAmount, existingPosition.avgPrice, price);
@@ -155,6 +176,7 @@ const Index = () => {
             await deletePosition(crypto);
           }
         }
+
         const transaction = {
           type: 'sell' as const,
           crypto,
@@ -171,6 +193,7 @@ const Index = () => {
         if (user) {
           await saveTransaction(transaction);
         }
+
         toast({
           title: t('sellSuccess'),
           description: `${t('sold')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
@@ -178,21 +201,23 @@ const Index = () => {
       } else {
         toast({
           title: t('insufficientPosition'),
-          description: "Vous n'avez pas assez de tokens pour effectuer cette vente.",
+          description: t('notEnoughTokens'),
           variant: "destructive"
         });
       }
     }
   };
+
   const searchCrypto = async () => {
     if (!contractAddress.trim()) {
       toast({
         title: t('error'),
-        description: "Veuillez entrer une adresse de contrat, un symbole ou un nom valide.",
+        description: t('contractPlaceholder'),
         variant: "destructive"
       });
       return;
     }
+
     setLoading(true);
     try {
       const query = contractAddress.toLowerCase().trim();
@@ -227,10 +252,8 @@ const Index = () => {
         }
       }
 
-      // Méthode 2: Recherche par adresse de contrat Ethereum ou Base
       if (!cryptoData && query.startsWith('0x') && query.length === 42) {
         try {
-          // Essai avec Base d'abord
           const baseResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${query}`, {
             headers: {
               'Accept': 'application/json',
@@ -240,7 +263,6 @@ const Index = () => {
           if (baseResponse.ok) {
             const baseData = await baseResponse.json();
             if (baseData.pairs && baseData.pairs.length > 0) {
-              // Prioriser les pairs sur Base
               const basePair = baseData.pairs.find(pair => pair.chainId === 'base' || pair.chainId === '8453') || baseData.pairs[0];
               cryptoData = {
                 id: query,
@@ -254,7 +276,6 @@ const Index = () => {
             }
           }
 
-          // Si pas trouvé sur DexScreener, essayer CoinGecko pour Ethereum
           if (!cryptoData) {
             const response = await fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${query}`);
             if (response.ok) {
@@ -277,7 +298,6 @@ const Index = () => {
         }
       }
 
-      // Méthode 3: Recherche par ID/symbole CoinGecko
       if (!cryptoData) {
         try {
           const response = await fetch(`https://api.coingecko.com/api/v3/coins/${query}`);
@@ -300,7 +320,6 @@ const Index = () => {
         }
       }
 
-      // Méthode 4: Recherche générale CoinGecko
       if (!cryptoData) {
         try {
           const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`);
@@ -329,11 +348,12 @@ const Index = () => {
           console.log('Erreur recherche CoinGecko:', error);
         }
       }
+
       if (cryptoData) {
         setSelectedCrypto(cryptoData);
         toast({
           title: t('success'),
-          description: `${cryptoData.name} (${cryptoData.symbol}) trouvé avec succès!`
+          description: `${cryptoData.name} (${cryptoData.symbol}) ${t('cryptoFound')}`
         });
       } else {
         throw new Error('Cryptocurrency not found');
@@ -342,7 +362,7 @@ const Index = () => {
       console.error('Erreur lors de la recherche:', error);
       toast({
         title: t('error'),
-        description: `Impossible de trouver cette crypto. Essayez:
+        description: `${t('cryptoNotFound')}
 • Adresse de contrat Base (0x...)
 • Adresse de contrat Solana (Pump.fun)
 • Adresse de contrat Ethereum (0x...)
@@ -355,6 +375,7 @@ const Index = () => {
       setLoading(false);
     }
   };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -362,26 +383,28 @@ const Index = () => {
       console.error('Erreur lors de la déconnexion:', error);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       {/* Header */}
       <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xs sm:text-sm">S</span>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
                   {t('title')}
                 </h1>
                 <div className="text-xs text-gray-400">
-                  <p>Simulator developed by MS-ShibaVik</p>
+                  <p className="truncate">{t('footerText')}</p>
                 </div>
               </div>
               
-              {/* Social Links */}
-              <div className="hidden md:flex items-center space-x-2 ml-4">
+              {/* Social Links - Hidden on small screens */}
+              <div className="hidden lg:flex items-center space-x-2 ml-4">
                 <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
                   <span className="text-gray-300 hover:text-cyan-400">𝕏</span>
                 </a>
@@ -399,118 +422,182 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="text-right">
-                <p className="text-sm text-gray-300">{t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span></p>
+                <p className="text-xs sm:text-sm text-gray-300">
+                  {t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span>
+                </p>
                 <p className="text-xs text-gray-400">
-                  {user ? <span className="flex items-center">
+                  {user ? (
+                    <span className="flex items-center">
                       <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      Connected: {user.email}
-                    </span> : 'Mode: Demo'}
+                      {t('connected')}: {user.email}
+                    </span>
+                  ) : `Mode: ${t('demo')}`}
                 </p>
               </div>
               
-              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal">
+              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal p-2">
                 <SettingsIcon className="h-4 w-4" />
               </Button>
               
-              {user ? <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10">
-                  <UserCircle className="h-4 w-4 mr-2" />
-                  {t('signOut')}
-                </Button> : <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800">
-                  <UserCircle className="h-4 w-4 mr-2" />
-                  {t('signIn')}
-                </Button>}
+              {user ? (
+                <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10 text-xs sm:text-sm px-2 sm:px-4">
+                  <UserCircle className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('signOut')}</span>
+                </Button>
+              ) : (
+                <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800 text-xs sm:text-sm px-2 sm:px-4">
+                  <UserCircle className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('signIn')}</span>
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center space-x-6 mt-4">
-            <Button variant={activeTab === 'trading' ? 'default' : 'ghost'} onClick={() => setActiveTab('trading')} className={activeTab === 'trading' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+          <div className="flex items-center space-x-2 sm:space-x-6 mt-3 sm:mt-4 overflow-x-auto">
+            <Button 
+              variant={activeTab === 'trading' ? 'default' : 'ghost'} 
+              onClick={() => setActiveTab('trading')} 
+              className={`${activeTab === 'trading' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'} text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap`}
+            >
               {t('trading')}
             </Button>
-            <Button variant={activeTab === 'portfolio' ? 'default' : 'ghost'} onClick={() => setActiveTab('portfolio')} className={activeTab === 'portfolio' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'portfolio' ? 'default' : 'ghost'} 
+              onClick={() => setActiveTab('portfolio')} 
+              className={`${activeTab === 'portfolio' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'} text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap`}
+            >
               {t('portfolio')}
             </Button>
-            <Button variant={activeTab === 'history' ? 'default' : 'ghost'} onClick={() => setActiveTab('history')} className={activeTab === 'history' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'history' ? 'default' : 'ghost'} 
+              onClick={() => setActiveTab('history')} 
+              className={`${activeTab === 'history' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white' : 'text-gray-300 hover:text-white'} text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap`}
+            >
               {t('history')}
             </Button>
-            <Button variant={activeTab === 'nft' ? 'default' : 'ghost'} onClick={() => setActiveTab('nft')} className={activeTab === 'nft' ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white' : 'text-gray-300 hover:text-white'}>
+            <Button 
+              variant={activeTab === 'nft' ? 'default' : 'ghost'} 
+              onClick={() => setActiveTab('nft')} 
+              className={`${activeTab === 'nft' ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white' : 'text-gray-300 hover:text-white'} text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap`}
+            >
               NFT
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Settings Panel */}
-        {showSettings && <div className="fixed top-20 right-4 z-40">
+        {showSettings && (
+          <div className="fixed top-16 sm:top-20 right-2 sm:right-4 z-40 w-[calc(100vw-16px)] sm:w-auto max-w-sm">
             <Settings demoBalance={balance} onDemoBalanceChange={user ? updateBalance : setBalance} isDemo={!user} />
-          </div>}
+          </div>
+        )}
 
         {/* Content based on active tab */}
-        {activeTab === 'trading' && <>
+        {activeTab === 'trading' && (
+          <>
             {/* Popular Cryptos */}
             <PopularCryptos onSelectCrypto={setSelectedCrypto} />
 
             {/* Memecoin Search */}
             <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
               <CardHeader className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
-                <CardTitle className="flex items-center space-x-2 text-lg">
-                  <Search className="h-5 w-5" />
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>{t('searchCrypto')}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="flex space-x-4">
-                  <Input type="text" placeholder="Contract address, symbol or name (e.g. 0xBC45647eA894030a4E9801Ec03479739FA2485F0, BTC, ETH)" value={contractAddress} onChange={e => setContractAddress(e.target.value)} className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400" />
-                  <Button onClick={searchCrypto} disabled={loading} className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                  <Input
+                    type="text"
+                    placeholder={t('contractPlaceholder')}
+                    value={contractAddress}
+                    onChange={(e) => setContractAddress(e.target.value)}
+                    className="flex-1 bg-gray-800/80 border-gray-600 text-white placeholder-gray-400 text-sm"
+                  />
+                  <Button
+                    onClick={searchCrypto}
+                    disabled={loading}
+                    className="bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white whitespace-nowrap"
+                  >
                     <Search className="h-4 w-4 mr-2" />
-                    {loading ? 'Recherche...' : t('search')}
+                    {loading ? t('searching') : t('search')}
                   </Button>
                 </div>
               </CardContent>
             </Card>
 
             {/* Trading Interface */}
-            {selectedCrypto ? <TradingInterface cryptoData={selectedCrypto} balance={balance} onTrade={handleTrade} positions={positions} /> : <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
-                <CardContent className="p-12 text-center">
-                  <p className="text-gray-400 text-lg">{t('searchToTrade')}</p>
+            {selectedCrypto ? (
+              <TradingInterface 
+                cryptoData={selectedCrypto} 
+                balance={balance} 
+                onTrade={handleTrade} 
+                positions={positions}
+                lastUpdate={lastUpdate}
+                isUpdating={isUpdating}
+              />
+            ) : (
+              <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+                <CardContent className="p-8 sm:p-12 text-center">
+                  <p className="text-gray-400 text-base sm:text-lg">{t('searchToTrade')}</p>
                 </CardContent>
-              </Card>}
-          </>}
+              </Card>
+            )}
+          </>
+        )}
 
-        {activeTab === 'portfolio' && <Portfolio balance={balance} positions={positions} totalPortfolioValue={totalPortfolioValue} onSelectCrypto={crypto => {
-        setSelectedCrypto(crypto);
-        setActiveTab('trading');
-      }} />}
+        {activeTab === 'portfolio' && (
+          <Portfolio 
+            balance={balance} 
+            positions={positions} 
+            totalPortfolioValue={totalPortfolioValue} 
+            onSelectCrypto={(crypto) => {
+              setSelectedCrypto(crypto);
+              setActiveTab('trading');
+            }} 
+          />
+        )}
 
-        {activeTab === 'history' && transactions.length > 0 && <TransactionHistory transactions={transactions} />}
+        {activeTab === 'history' && transactions.length > 0 && (
+          <TransactionHistory transactions={transactions} />
+        )}
 
-        {activeTab === 'history' && transactions.length === 0 && <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
-            <CardContent className="p-12 text-center">
-              <p className="text-gray-400 text-lg">Aucune transaction pour le moment</p>
+        {activeTab === 'history' && transactions.length === 0 && (
+          <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
+            <CardContent className="p-8 sm:p-12 text-center">
+              <p className="text-gray-400 text-base sm:text-lg">{t('noTransactions')}</p>
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {activeTab === 'nft' && <NFTGallery />}
 
         {/* Auth Panel */}
-        {showAuth && <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900/95 rounded-lg p-6 w-full max-w-md border border-gray-700">
+        {showAuth && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900/95 rounded-lg p-4 sm:p-6 w-full max-w-md border border-gray-700">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-white">Authentication</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-white">{t('authentication')}</h2>
                 <Button onClick={() => setShowAuth(false)} variant="ghost" size="sm" className="text-gray-400 hover:text-white">
                   ✕
                 </Button>
               </div>
               <Auth onClose={() => setShowAuth(false)} />
             </div>
-          </div>}
+          </div>
+        )}
       </div>
 
       {/* Footer */}
       <Footer />
-    </div>;
+    </div>
+  );
 };
+
 export default Index;

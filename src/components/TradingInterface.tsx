@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Select,
@@ -35,15 +35,19 @@ interface TradingInterfaceProps {
   balance: number;
   onTrade: (type: 'buy' | 'sell', amount: number) => void;
   positions: Position[];
+  lastUpdate?: Date | null;
+  isUpdating?: boolean;
 }
 
 const TradingInterface: React.FC<TradingInterfaceProps> = ({
   cryptoData,
   balance,
   onTrade,
-  positions
+  positions,
+  lastUpdate,
+  isUpdating
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [inputMode, setInputMode] = useState<'tokens' | 'usd'>('tokens');
   const [tokenAmount, setTokenAmount] = useState('');
@@ -85,30 +89,47 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
       {/* Crypto Info */}
       <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between text-white">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between text-white gap-2">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-sm">{cryptoData.symbol.charAt(0)}</span>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">{cryptoData.symbol}</h2>
-                <p className="text-sm text-gray-400">{cryptoData.name}</p>
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold truncate">{cryptoData.symbol}</h2>
+                <p className="text-xs sm:text-sm text-gray-400 truncate">{cryptoData.name}</p>
               </div>
             </div>
+            {/* Price Update Indicator */}
+            {(lastUpdate || isUpdating) && (
+              <div className="flex items-center space-x-2 text-xs">
+                {isUpdating && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>}
+                {lastUpdate && (
+                  <div className="flex items-center space-x-1 text-green-400">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }).format(lastUpdate)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-gray-400">{t('currentPrice')}</span>
-            <span className="text-2xl font-bold text-white">${cryptoData.current_price.toFixed(8)}</span>
+            <span className="text-gray-400 text-sm sm:text-base">{t('currentPrice')}</span>
+            <span className="text-lg sm:text-2xl font-bold text-white">${cryptoData.current_price.toFixed(8)}</span>
           </div>
           
           <div className="flex items-center justify-between">
-            <span className="text-gray-400">24h Change</span>
+            <span className="text-gray-400 text-sm sm:text-base">24h Change</span>
             <div className={`flex items-center space-x-1 ${
               cryptoData.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'
             }`}>
@@ -117,26 +138,26 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
               ) : (
                 <TrendingDown className="h-4 w-4" />
               )}
-              <span className="font-bold">
+              <span className="font-bold text-sm sm:text-base">
                 {cryptoData.price_change_percentage_24h.toFixed(2)}%
               </span>
             </div>
           </div>
 
           {position && (
-            <div className="bg-gray-800/80 rounded-lg p-4 border border-gray-700">
+            <div className="bg-gray-800/80 rounded-lg p-3 sm:p-4 border border-gray-700">
               <h3 className="text-sm font-medium text-gray-400 mb-2">{t('position')}</h3>
               <div className="space-y-2">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-400">{t('quantity')}</span>
                   <span className="text-white">{position.amount.toFixed(6)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-400">{t('avgPurchasePrice')}</span>
                   <span className="text-white">${position.avgPrice.toFixed(8)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Valeur actuelle</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">{t('currentValue')}</span>
                   <span className="text-cyan-400">${(position.amount * cryptoData.current_price).toFixed(2)}</span>
                 </div>
               </div>
@@ -148,14 +169,14 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
       {/* Trading Panel */}
       <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-white">{t('trading')}</CardTitle>
+          <CardTitle className="text-white text-base sm:text-lg">{t('trading')}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6">
           {/* Trade Type Selection */}
           <div className="flex space-x-2">
             <Button
               onClick={() => setTradeType('buy')}
-              className={`flex-1 ${
+              className={`flex-1 text-sm sm:text-base ${
                 tradeType === 'buy'
                   ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
                   : 'bg-gray-800/80 text-gray-300 hover:text-white border border-gray-600'
@@ -166,7 +187,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
             <Button
               onClick={() => setTradeType('sell')}
               disabled={!position || position.amount === 0}
-              className={`flex-1 ${
+              className={`flex-1 text-sm sm:text-base ${
                 tradeType === 'sell'
                   ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
                   : 'bg-gray-800/80 text-gray-300 hover:text-white border border-gray-600'
@@ -178,7 +199,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
 
           {/* Input Mode Selection */}
           <div className="space-y-2">
-            <Label className="text-gray-200">Mode de saisie</Label>
+            <Label className="text-gray-200 text-sm">{t('inputMode')}</Label>
             <Select value={inputMode} onValueChange={(value: 'tokens' | 'usd') => setInputMode(value)}>
               <SelectTrigger className="bg-gray-800/80 border-gray-600 text-white">
                 <SelectValue />
@@ -198,14 +219,14 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <Label className="text-gray-200">
+                <Label className="text-gray-200 text-sm">
                   {inputMode === 'tokens' ? t('quantity') : t('amountInDollars')}
                 </Label>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={setMaxAmount}
-                  className="text-xs text-cyan-400 hover:text-cyan-300"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 h-auto p-1"
                 >
                   {t('maximum')}: {inputMode === 'tokens' 
                     ? (tradeType === 'buy' 
@@ -232,7 +253,7 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
             </div>
 
             {/* Summary */}
-            <div className="bg-gray-800/80 rounded-lg p-4 border border-gray-700 space-y-2">
+            <div className="bg-gray-800/80 rounded-lg p-3 sm:p-4 border border-gray-700 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">{t('unitPrice')}</span>
                 <span className="text-white">${cryptoData.current_price.toFixed(8)}</span>
@@ -252,13 +273,13 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
           <Button
             onClick={handleTrade}
             disabled={!tokenAmount || parseFloat(tokenAmount) <= 0}
-            className={`w-full py-3 text-lg font-bold ${
+            className={`w-full py-3 text-sm sm:text-lg font-bold ${
               tradeType === 'buy'
                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
                 : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
             }`}
           >
-            <DollarSign className="h-5 w-5 mr-2" />
+            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             {tradeType === 'buy' ? t('buy') : t('sell')} {cryptoData.symbol}
           </Button>
         </CardContent>
