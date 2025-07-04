@@ -407,15 +407,15 @@ const Index = () => {
               onSignOut={handleSignOut}
             />
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
+            <div className="flex items-center justify-center">
+              <div className="flex items-center space-x-6">
+                <div className="text-center">
                   <p className="text-sm text-gray-300">
                     {t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span>
                   </p>
                   <p className="text-xs text-gray-400">
                     {user ? (
-                      <span className="flex items-center">
+                      <span className="flex items-center justify-center">
                         <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
                         {t('connected')}: {user.email}
                       </span>
@@ -486,7 +486,8 @@ const Index = () => {
               demoBalance={balance} 
               onDemoBalanceChange={user ? updateBalance : setBalance} 
               onResetAccount={handleResetAccount}
-              isDemo={!user} 
+              isDemo={!user}
+              onClose={() => setShowSettings(false)}
             />
           </div>
         )}
