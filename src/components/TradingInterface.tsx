@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Select,
@@ -37,6 +37,8 @@ interface TradingInterfaceProps {
   positions: Position[];
   lastUpdate?: Date | null;
   isUpdating?: boolean;
+  priceSource?: string;
+  isPriceConsistent?: boolean;
 }
 
 const TradingInterface: React.FC<TradingInterfaceProps> = ({
@@ -45,7 +47,9 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
   onTrade,
   positions,
   lastUpdate,
-  isUpdating
+  isUpdating,
+  priceSource,
+  isPriceConsistent = true
 }) => {
   const { t, language } = useLanguage();
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
@@ -103,20 +107,31 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
                 <p className="text-xs sm:text-sm text-gray-400 truncate">{cryptoData.name}</p>
               </div>
             </div>
-            {/* Price Update Indicator */}
+            {/* Enhanced Price Update Indicator */}
             {(lastUpdate || isUpdating) && (
-              <div className="flex items-center space-x-2 text-xs">
-                {isUpdating && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>}
-                {lastUpdate && (
-                  <div className="flex items-center space-x-1 text-green-400">
-                    <Clock className="h-3 w-3" />
-                    <span>
-                      {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }).format(lastUpdate)}
-                    </span>
-                  </div>
+              <div className="flex flex-col items-end space-y-1 text-xs">
+                <div className="flex items-center space-x-2">
+                  {isUpdating && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>}
+                  {isPriceConsistent ? (
+                    <CheckCircle className="h-3 w-3 text-green-400" />
+                  ) : (
+                    <AlertTriangle className="h-3 w-3 text-yellow-400" />
+                  )}
+                  {lastUpdate && (
+                    <div className="flex items-center space-x-1 text-green-400">
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit'
+                        }).format(lastUpdate)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {priceSource && (
+                  <span className="text-xs text-gray-400">via {priceSource}</span>
                 )}
               </div>
             )}
@@ -125,7 +140,12 @@ const TradingInterface: React.FC<TradingInterfaceProps> = ({
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-gray-400 text-sm sm:text-base">{t('currentPrice')}</span>
-            <span className="text-lg sm:text-2xl font-bold text-white">${cryptoData.current_price.toFixed(8)}</span>
+            <div className="text-right">
+              <span className="text-lg sm:text-2xl font-bold text-white">${cryptoData.current_price.toFixed(8)}</span>
+              {!isPriceConsistent && (
+                <p className="text-xs text-yellow-400">Prix en cours de vérification</p>
+              )}
+            </div>
           </div>
           
           <div className="flex items-center justify-between">

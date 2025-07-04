@@ -10,11 +10,13 @@ import TransactionHistory from '@/components/TransactionHistory';
 import NFTGallery from '@/components/NFTGallery';
 import Settings from '@/components/Settings';
 import Auth from '@/components/Auth';
+import MobileHeader from '@/components/MobileHeader';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/useAuth';
 import { useUserData } from '@/hooks/useUserData';
-import { useCryptoPrice } from '@/hooks/useCryptoPrice';
+import { usePriceSync } from '@/hooks/usePriceSync';
+import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from '@/components/Footer';
 
 interface CryptoData {
@@ -30,6 +32,7 @@ const Index = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
   const {
     balance,
     positions,
@@ -51,8 +54,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('trading');
   const [totalPortfolioValue, setTotalPortfolioValue] = useState(balance);
 
-  // Utiliser le hook pour mettre à jour le prix du crypto sélectionné
-  const { currentPrice, lastUpdate, isUpdating } = useCryptoPrice(selectedCrypto);
+  // Utiliser le nouveau hook de synchronisation des prix
+  const { currentPrice, lastUpdate, isUpdating, priceSource, isPriceConsistent } = usePriceSync(selectedCrypto);
 
   // Synchroniser le prix dans selectedCrypto avec le prix mis à jour
   useEffect(() => {
@@ -388,80 +391,83 @@ const Index = () => {
       {/* Header */}
       <header className="bg-black/30 backdrop-blur-sm border-b border-gray-700/50">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-xs sm:text-sm">S</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
-                  {t('title')}
-                </h1>
-                <div className="text-xs text-gray-400 hidden sm:block">
-                  <p className="truncate">{t('footerText')}</p>
+          {isMobile ? (
+            <MobileHeader
+              balance={balance}
+              user={user}
+              onShowSettings={() => setShowSettings(!showSettings)}
+              onShowAuth={() => setShowAuth(!showAuth)}
+              onSignOut={handleSignOut}
+            />
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4 min-w-0 flex-1">
+                <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-sm">S</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
+                    {t('title')}
+                  </h1>
+                  <div className="text-xs text-gray-400">
+                    <p className="truncate">{t('footerText')}</p>
+                  </div>
+                </div>
+                
+                {/* Social Links - Desktop */}
+                <div className="flex items-center space-x-2">
+                  <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
+                    <span className="text-gray-300 hover:text-cyan-400 text-base">𝕏</span>
+                  </a>
+                  <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
+                    <Linkedin className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                  </a>
+                  <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors">
+                    <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
+                      <span className="text-white font-bold text-xs">OS</span>
+                    </div>
+                  </a>
+                  <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
+                    <Github className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                  </a>
                 </div>
               </div>
               
-              {/* Social Links - Visible on mobile with smaller size */}
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
-                  <span className="text-gray-300 hover:text-cyan-400 text-xs sm:text-base">𝕏</span>
-                </a>
-                <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
-                  <Linkedin className="h-3 w-3 sm:h-4 sm:w-4 text-gray-300 hover:text-cyan-400" />
-                </a>
-                <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors">
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
-                    <span className="text-white font-bold text-[8px] sm:text-xs">OS</span>
-                  </div>
-                </a>
-                <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
-                  <Github className="h-3 w-3 sm:h-4 sm:w-4 text-gray-300 hover:text-cyan-400" />
-                </a>
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <p className="text-sm text-gray-300">
+                    {t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span>
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {user ? (
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                        {t('connected')}: {user.email}
+                      </span>
+                    ) : (
+                      <span>Mode: {t('demo')}</span>
+                    )}
+                  </p>
+                </div>
+                
+                <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal p-2">
+                  <SettingsIcon className="h-4 w-4" />
+                </Button>
+                
+                {user ? (
+                  <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10 text-sm px-4">
+                    <UserCircle className="h-4 w-4 mr-2" />
+                    {t('signOut')}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800 text-sm px-4">
+                    <UserCircle className="h-4 w-4 mr-2" />
+                    {t('signIn')}
+                  </Button>
+                )}
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <div className="text-right">
-                <p className="text-xs sm:text-sm text-gray-300">
-                  {/* Texte raccourci pour mobile */}
-                  <span className="hidden sm:inline">{t('currentBalance')}: </span>
-                  <span className="sm:hidden">Balance: </span>
-                  <span className="font-bold text-white">${balance.toFixed(2)}</span>
-                </p>
-                <p className="text-xs text-gray-400">
-                  {user ? (
-                    <span className="flex items-center">
-                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      <span className="hidden sm:inline">{t('connected')}: {user.email}</span>
-                      <span className="sm:hidden">Online</span>
-                    </span>
-                  ) : (
-                    <span>
-                      <span className="hidden sm:inline">Mode: {t('demo')}</span>
-                      <span className="sm:hidden">{t('demo')}</span>
-                    </span>
-                  )}
-                </p>
-              </div>
-              
-              <Button onClick={() => setShowSettings(!showSettings)} variant="outline" size="sm" className="border-purple-400/50 text-base rounded text-cyan-400 bg-slate-900 hover:bg-slate-800 font-normal p-2">
-                <SettingsIcon className="h-4 w-4" />
-              </Button>
-              
-              {user ? (
-                <Button onClick={handleSignOut} variant="outline" className="border-cyan-400/50 text-cyan-300 hover:bg-cyan-500/10 text-xs sm:text-sm px-2 sm:px-4">
-                  <UserCircle className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">{t('signOut')}</span>
-                </Button>
-              ) : (
-                <Button onClick={() => setShowAuth(!showAuth)} variant="outline" className="border-cyan-400/50 text-cyan-300 bg-slate-900 hover:bg-slate-800 text-xs sm:text-sm px-2 sm:px-4">
-                  <UserCircle className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">{t('signIn')}</span>
-                </Button>
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Navigation */}
           <div className="flex items-center space-x-2 sm:space-x-6 mt-3 sm:mt-4 overflow-x-auto">
