@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -395,29 +394,29 @@ const Index = () => {
                 <span className="text-white font-bold text-xs sm:text-sm">S</span>
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
+                <h1 className="text-base sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent truncate">
                   {t('title')}
                 </h1>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-gray-400 hidden sm:block">
                   <p className="truncate">{t('footerText')}</p>
                 </div>
               </div>
               
-              {/* Social Links - Hidden on small screens */}
-              <div className="hidden lg:flex items-center space-x-2 ml-4">
-                <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
-                  <span className="text-gray-300 hover:text-cyan-400">𝕏</span>
+              {/* Social Links - Visible on mobile with smaller size */}
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <a href="https://twitter.com/Nft_ShibaVik" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="Twitter">
+                  <span className="text-gray-300 hover:text-cyan-400 text-xs sm:text-base">𝕏</span>
                 </a>
-                <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
-                  <Linkedin className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                <a href="https://www.linkedin.com/in/sullyvan-milhau" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="LinkedIn">
+                  <Linkedin className="h-3 w-3 sm:h-4 sm:w-4 text-gray-300 hover:text-cyan-400" />
                 </a>
-                <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors px-[8px]">
-                  <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
-                    <span className="text-white mx-0 font-bold text-xs">OS</span>
+                <a href="https://opensea.io/ShibaVik" target="_blank" rel="noopener noreferrer" title="OpenSea" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-sm flex items-center justify-center">
+                    <span className="text-white font-bold text-[8px] sm:text-xs">OS</span>
                   </div>
                 </a>
-                <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
-                  <Github className="h-4 w-4 text-gray-300 hover:text-cyan-400" />
+                <a href="https://github.com/ShibaVik" target="_blank" rel="noopener noreferrer" className="p-1 sm:p-2 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors" title="GitHub">
+                  <Github className="h-3 w-3 sm:h-4 sm:w-4 text-gray-300 hover:text-cyan-400" />
                 </a>
               </div>
             </div>
@@ -425,15 +424,24 @@ const Index = () => {
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="text-right">
                 <p className="text-xs sm:text-sm text-gray-300">
-                  {t('currentBalance')}: <span className="font-bold text-white">${balance.toFixed(2)}</span>
+                  {/* Texte raccourci pour mobile */}
+                  <span className="hidden sm:inline">{t('currentBalance')}: </span>
+                  <span className="sm:hidden">Balance: </span>
+                  <span className="font-bold text-white">${balance.toFixed(2)}</span>
                 </p>
                 <p className="text-xs text-gray-400">
                   {user ? (
                     <span className="flex items-center">
                       <span className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
-                      {t('connected')}: {user.email}
+                      <span className="hidden sm:inline">{t('connected')}: {user.email}</span>
+                      <span className="sm:hidden">Online</span>
                     </span>
-                  ) : `Mode: ${t('demo')}`}
+                  ) : (
+                    <span>
+                      <span className="hidden sm:inline">Mode: {t('demo')}</span>
+                      <span className="sm:hidden">{t('demo')}</span>
+                    </span>
+                  )}
                 </p>
               </div>
               
