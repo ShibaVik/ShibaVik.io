@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Wallet, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, DollarSign, Clock, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePortfolioPriceSync } from '@/hooks/usePortfolioPriceSync';
+import { Button } from "@/components/ui/button";
 
 interface Position {
   crypto: string;
@@ -16,13 +18,38 @@ interface PortfolioProps {
   positions: Position[];
   totalPortfolioValue: number;
   onSelectCrypto?: (crypto: { id: string; symbol: string; name: string; current_price: number; price_change_percentage_24h: number; }) => void;
+  onUpdatePositions?: (updatedPositions: Position[]) => void;
 }
 
-const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfolioValue, onSelectCrypto }) => {
-  const { t } = useLanguage();
+const Portfolio: React.FC<PortfolioProps> = ({ 
+  balance, 
+  positions, 
+  totalPortfolioValue, 
+  onSelectCrypto,
+  onUpdatePositions 
+}) => {
+  const { t, language } = useLanguage();
+  const { portfolioPrices, syncAllPrices } = usePortfolioPriceSync(positions);
 
-  const totalInvested = positions.reduce((sum, position) => sum + (position.amount * position.avgPrice), 0);
-  const totalCurrentValue = positions.reduce((sum, position) => sum + (position.amount * position.currentPrice), 0);
+  // Calculer les positions avec les prix mis à jour
+  const updatedPositions = positions.map(position => {
+    const priceInfo = portfolioPrices[position.crypto];
+    const currentPrice = priceInfo?.price || position.currentPrice;
+    return {
+      ...position,
+      currentPrice
+    };
+  });
+
+  // Mettre à jour les positions dans le composant parent si disponible
+  React.useEffect(() => {
+    if (onUpdatePositions && Object.keys(portfolioPrices).length > 0) {
+      onUpdatePositions(updatedPositions);
+    }
+  }, [portfolioPrices, positions, onUpdatePositions]);
+
+  const totalInvested = updatedPositions.reduce((sum, position) => sum + (position.amount * position.avgPrice), 0);
+  const totalCurrentValue = updatedPositions.reduce((sum, position) => sum + (position.amount * position.currentPrice), 0);
   const totalPnL = totalCurrentValue - totalInvested;
   const totalPnLPercentage = totalInvested > 0 ? (totalPnL / totalInvested) * 100 : 0;
 
@@ -36,6 +63,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
         price_change_percentage_24h: 0
       });
     }
+  };
+
+  const handleManualSync = () => {
+    syncAllPrices();
   };
 
   if (positions.length === 0) {
@@ -61,9 +92,19 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
       {/* Portfolio Summary */}
       <Card className="bg-gray-900/90 border-gray-700 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-white">
-            <DollarSign className="h-5 w-5 text-green-400" />
-            <span className="text-lg sm:text-xl">{t('portfolioSummary')}</span>
+          <CardTitle className="flex items-center justify-between text-white">
+            <div className="flex items-center space-x-2">
+              <DollarSign className="h-5 w-5 text-green-400" />
+              <span className="text-lg sm:text-xl">{t('portfolioSummary')}</span>
+            </div>
+            <Button 
+              onClick={handleManualSync}
+              variant="ghost" 
+              size="sm"
+              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -74,7 +115,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
             </div>
             <div className="text-center">
               <p className="text-xs sm:text-sm text-gray-400 mb-1">{t('totalValue')}</p>
-              <p className="text-lg sm:text-2xl font-bold text-cyan-400">${totalPortfolioValue.toFixed(2)}</p>
+              <p className="text-lg sm:text-2xl font-bold text-cyan-400">${(balance + totalCurrentValue).toFixed(2)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs sm:text-sm text-gray-400 mb-1">{t('totalCost')}</p>
@@ -114,11 +155,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
         </CardHeader>
         <CardContent>
           <div className="space-y-3 sm:space-y-4">
-            {positions.map((position, index) => {
+            {updatedPositions.map((position, index) => {
               const currentValue = position.amount * position.currentPrice;
               const investedValue = position.amount * position.avgPrice;
               const pnl = currentValue - investedValue;
               const pnlPercentage = (pnl / investedValue) * 100;
+              const priceInfo = portfolioPrices[position.crypto];
 
               return (
                 <div 
@@ -130,6 +172,29 @@ const Portfolio: React.FC<PortfolioProps> = ({ balance, positions, totalPortfoli
                     <div className="min-w-0 flex-1">
                       <h3 className="text-base sm:text-lg font-semibold text-white truncate">{position.crypto}</h3>
                       <p className="text-xs sm:text-sm text-gray-400">{position.amount.toFixed(6)} tokens</p>
+                      {/* Indicateur de mise à jour des prix */}
+                      {priceInfo && (
+                        <div className="flex items-center space-x-2 text-xs mt-1">
+                          {priceInfo.isUpdating && (
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>
+                          )}
+                          {priceInfo.lastUpdate && (
+                            <div className="flex items-center space-x-1 text-green-400">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                }).format(priceInfo.lastUpdate)}
+                              </span>
+                            </div>
+                          )}
+                          {priceInfo.source && (
+                            <span className="text-gray-400">via {priceInfo.source}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className={`text-right ${pnl >= 0 ? 'text-green-400' : 'text-red-400'} ml-2`}>
                       <div className="flex items-center space-x-1">

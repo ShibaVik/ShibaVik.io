@@ -74,6 +74,11 @@ const Index = () => {
     setTotalPortfolioValue(balance + portfolioValue);
   }, [balance, positions, currentPrice, selectedCrypto]);
 
+  // Nouvelle fonction pour mettre à jour les positions avec les prix synchronisés
+  const handleUpdatePositions = (updatedPositions: Position[]) => {
+    setPositions(updatedPositions);
+  };
+
   // Fonction pour réinitialiser complètement le compte démo
   const handleResetAccount = () => {
     setBalance(10000);
@@ -557,7 +562,8 @@ const Index = () => {
             onSelectCrypto={(crypto) => {
               setSelectedCrypto(crypto);
               setActiveTab('trading');
-            }} 
+            }}
+            onUpdatePositions={handleUpdatePositions}
           />
         )}
 
