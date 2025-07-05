@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, Wallet, DollarSign, Clock, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, DollarSign, Clock, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePortfolioPriceSync } from '@/hooks/usePortfolioPriceSync';
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
   onUpdatePositions 
 }) => {
   const { t, language } = useLanguage();
-  const { portfolioPrices, syncAllPrices } = usePortfolioPriceSync(positions);
+  const { portfolioPrices, syncAllPrices, lastSyncTime } = usePortfolioPriceSync(positions);
 
   // Calculer les positions avec les prix mis à jour
   const updatedPositions = positions.map(position => {
@@ -66,6 +66,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
   };
 
   const handleManualSync = () => {
+    console.log('🔄 Synchronisation manuelle déclenchée');
     syncAllPrices();
   };
 
@@ -97,14 +98,27 @@ const Portfolio: React.FC<PortfolioProps> = ({
               <DollarSign className="h-5 w-5 text-green-400" />
               <span className="text-lg sm:text-xl">{t('portfolioSummary')}</span>
             </div>
-            <Button 
-              onClick={handleManualSync}
-              variant="ghost" 
-              size="sm"
-              className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {lastSyncTime && (
+                <div className="text-xs text-gray-400 flex items-center space-x-1">
+                  <Clock className="h-3 w-3" />
+                  <span>
+                    {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }).format(lastSyncTime)}
+                  </span>
+                </div>
+              )}
+              <Button 
+                onClick={handleManualSync}
+                variant="ghost" 
+                size="sm"
+                className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -172,14 +186,23 @@ const Portfolio: React.FC<PortfolioProps> = ({
                     <div className="min-w-0 flex-1">
                       <h3 className="text-base sm:text-lg font-semibold text-white truncate">{position.crypto}</h3>
                       <p className="text-xs sm:text-sm text-gray-400">{position.amount.toFixed(6)} tokens</p>
-                      {/* Indicateur de mise à jour des prix */}
+                      {/* Indicateur de mise à jour des prix avec plus de détails */}
                       {priceInfo && (
-                        <div className="flex items-center space-x-2 text-xs mt-1">
+                        <div className="flex items-center space-x-2 text-xs mt-1 flex-wrap">
                           {priceInfo.isUpdating && (
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-cyan-400"></div>
+                            <div className="flex items-center space-x-1 text-yellow-400">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-yellow-400"></div>
+                              <span>Sync...</span>
+                            </div>
                           )}
-                          {priceInfo.lastUpdate && (
-                            <div className="flex items-center space-x-1 text-green-400">
+                          {priceInfo.isStale && (
+                            <div className="flex items-center space-x-1 text-orange-400">
+                              <AlertTriangle className="h-3 w-3" />
+                              <span>Prix obsolète</span>
+                            </div>
+                          )}
+                          {priceInfo.lastUpdate && !priceInfo.isUpdating && (
+                            <div className={`flex items-center space-x-1 ${priceInfo.isStale ? 'text-orange-400' : 'text-green-400'}`}>
                               <Clock className="h-3 w-3" />
                               <span>
                                 {new Intl.DateTimeFormat(language === 'fr' ? 'fr-FR' : 'en-US', {
@@ -191,7 +214,7 @@ const Portfolio: React.FC<PortfolioProps> = ({
                             </div>
                           )}
                           {priceInfo.source && (
-                            <span className="text-gray-400">via {priceInfo.source}</span>
+                            <span className="text-gray-400 text-xs">via {priceInfo.source}</span>
                           )}
                         </div>
                       )}
@@ -218,7 +241,9 @@ const Portfolio: React.FC<PortfolioProps> = ({
                     </div>
                     <div>
                       <p className="text-gray-400">{t('currentPrice')}</p>
-                      <p className="text-white font-medium">${position.currentPrice.toFixed(6)}</p>
+                      <p className={`font-medium ${priceInfo?.isStale ? 'text-orange-400' : 'text-white'}`}>
+                        ${position.currentPrice.toFixed(6)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-400">{t('investedValue')}</p>
