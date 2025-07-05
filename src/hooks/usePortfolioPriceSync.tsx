@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 
 interface PriceData {
@@ -207,8 +206,8 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
     // Synchronisation initiale
     syncAllPrices();
 
-    // Synchronisation périodique toutes les 15 secondes
-    const interval = setInterval(syncAllPrices, 15000);
+    // Synchronisation périodique toutes les minutes (60000ms au lieu de 15000ms)
+    const interval = setInterval(syncAllPrices, 60000);
 
     return () => clearInterval(interval);
   }, [positions, syncAllPrices]);
