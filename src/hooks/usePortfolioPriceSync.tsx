@@ -27,62 +27,24 @@ interface PortfolioPrices {
 export const usePortfolioPriceSync = (positions: Position[]) => {
   const [portfolioPrices, setPortfolioPrices] = useState<PortfolioPrices>({});
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [isGlobalSync, setIsGlobalSync] = useState(false);
 
-  const fetchFromDexScreener = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
+  const fetchPrice = useCallback(async (crypto: string): Promise<PriceData | null> => {
+    console.log(`Fetching price for ${crypto}`);
+    
     try {
-      console.log(`Fetching from DexScreener for contract: ${contractAddress}`);
-      const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
+      // Essayer d'abord CoinGecko pour les cryptos populaires
+      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto.toLowerCase()}&vs_currencies=usd`, {
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          'Accept': 'application/json'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        if (data.pairs && data.pairs.length > 0) {
-          const price = parseFloat(data.pairs[0].priceUsd);
-          if (price && price > 0) {
-            console.log(`DexScreener prix trouvé: $${price} pour ${contractAddress}`);
-            return {
-              price,
-              source: 'DexScreener',
-              timestamp: new Date()
-            };
-          }
-        }
-      }
-    } catch (error) {
-      console.log('DexScreener error for contract:', contractAddress, error);
-    }
-    return null;
-  }, []);
-
-  const fetchFromCoinGecko = useCallback(async (cryptoSymbol: string): Promise<PriceData | null> => {
-    try {
-      console.log(`Fetching from CoinGecko for symbol: ${cryptoSymbol}`);
-      // Essayer d'abord avec le symbole directement
-      let url = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoSymbol.toLowerCase()}&vs_currencies=usd`;
-      let response = await fetch(url);
-      
-      if (!response.ok) {
-        // Si échec, essayer avec une recherche
-        const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(cryptoSymbol)}`);
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          if (searchData.coins && searchData.coins.length > 0) {
-            const coinId = searchData.coins[0].id;
-            url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`;
-            response = await fetch(url);
-          }
-        }
-      }
-      
-      if (response.ok) {
-        const data = await response.json();
         const coinKey = Object.keys(data)[0];
         if (coinKey && data[coinKey]?.usd) {
-          console.log(`CoinGecko prix trouvé: $${data[coinKey].usd} pour ${cryptoSymbol}`);
+          console.log(`CoinGecko price found: $${data[coinKey].usd} for ${crypto}`);
           return {
             price: data[coinKey].usd,
             source: 'CoinGecko',
@@ -90,33 +52,21 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
           };
         }
       }
-    } catch (error) {
-      console.log('CoinGecko error for symbol:', cryptoSymbol, error);
-    }
-    return null;
-  }, []);
 
-  const fetchFromPumpFun = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
-    try {
-      console.log(`Fetching from Pump.fun/Solana for contract: ${contractAddress}`);
-      if (contractAddress && contractAddress.length > 30 && !contractAddress.startsWith('0x')) {
-        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pairs && data.pairs.length > 0) {
-            const solanaPair = data.pairs.find(pair => pair.chainId === 'solana') || data.pairs[0];
-            const price = parseFloat(solanaPair.priceUsd);
-            if (price && price > 0) {
-              console.log(`Pump.fun/Solana prix trouvé: $${price} pour ${contractAddress}`);
+      // Si CoinGecko échoue, essayer une recherche
+      const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(crypto)}`);
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        if (searchData.coins && searchData.coins.length > 0) {
+          const coinId = searchData.coins[0].id;
+          const priceResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+          if (priceResponse.ok) {
+            const priceData = await priceResponse.json();
+            if (priceData[coinId]?.usd) {
+              console.log(`CoinGecko search price found: $${priceData[coinId].usd} for ${crypto}`);
               return {
-                price,
-                source: 'Pump.fun/Solana',
+                price: priceData[coinId].usd,
+                source: 'CoinGecko',
                 timestamp: new Date()
               };
             }
@@ -124,34 +74,16 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         }
       }
     } catch (error) {
-      console.log('Pump.fun error for contract:', contractAddress, error);
+      console.log(`Error fetching price for ${crypto}:`, error);
     }
+    
     return null;
   }, []);
 
-  const validatePriceConsistency = useCallback((prices: PriceData[]): PriceData | null => {
-    if (prices.length === 0) return null;
-    if (prices.length === 1) return prices[0];
-
-    // Calculer la moyenne et détecter les écarts importants
-    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
-    const validPrices = prices.filter(p => {
-      const deviation = Math.abs(p.price - avgPrice) / avgPrice;
-      return deviation < 0.1; // Tolérance de 10%
-    });
-
-    if (validPrices.length === 0) {
-      console.warn('Tous les prix sont incohérents, utilisation du prix le plus récent');
-      return prices.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-    }
-
-    // Retourner le prix le plus récent parmi les prix cohérents
-    return validPrices.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-  }, []);
-
-  const syncPriceForCrypto = useCallback(async (crypto: string, contractAddress?: string) => {
-    console.log(`Synchronisation du prix pour ${crypto}${contractAddress ? ` (${contractAddress})` : ''}`);
+  const syncPriceForCrypto = useCallback(async (crypto: string) => {
+    console.log(`Syncing price for ${crypto}`);
     
+    // Marquer comme en cours de mise à jour
     setPortfolioPrices(prev => ({
       ...prev,
       [crypto]: {
@@ -164,57 +96,23 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
       }
     }));
 
-    const sources: Promise<PriceData | null>[] = [];
-
-    // Stratégie de récupération selon le type de crypto
-    if (contractAddress) {
-      if (contractAddress.startsWith('0x') && contractAddress.length === 42) {
-        // Contrat Ethereum/Base - utiliser DexScreener puis CoinGecko
-        sources.push(fetchFromDexScreener(contractAddress));
-        sources.push(fetchFromCoinGecko(crypto));
-        console.log(`Recherche prix Ethereum/Base pour ${crypto}`);
-      } else if (contractAddress.length > 30) {
-        // Contrat Solana/Pump.fun - utiliser Pump.fun puis DexScreener
-        sources.push(fetchFromPumpFun(contractAddress));
-        sources.push(fetchFromDexScreener(contractAddress));
-        console.log(`Recherche prix Solana/Pump.fun pour ${crypto}`);
-      }
-    } else {
-      // Crypto populaire - utiliser CoinGecko
-      sources.push(fetchFromCoinGecko(crypto));
-      console.log(`Recherche prix CoinGecko pour ${crypto}`);
-    }
-
     try {
-      const results = await Promise.allSettled(sources);
-      const validPrices: PriceData[] = [];
-
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value) {
-          validPrices.push(result.value);
-          console.log(`Source ${index + 1} retournée: $${result.value.price} (${result.value.source})`);
-        } else if (result.status === 'rejected') {
-          console.log(`Source ${index + 1} échouée:`, result.reason);
-        }
-      });
-
-      const selectedPrice = validatePriceConsistency(validPrices);
-
-      if (selectedPrice) {
+      const priceData = await fetchPrice(crypto);
+      
+      if (priceData) {
         setPortfolioPrices(prev => ({
           ...prev,
           [crypto]: {
-            price: selectedPrice.price,
-            source: selectedPrice.source,
+            price: priceData.price,
+            source: priceData.source,
             lastUpdate: new Date(),
             isUpdating: false,
             isStale: false
           }
         }));
-
-        console.log(`✅ Prix synchronisé pour ${crypto}: $${selectedPrice.price} (${selectedPrice.source})`);
+        console.log(`✅ Price synced for ${crypto}: $${priceData.price} (${priceData.source})`);
       } else {
-        console.warn(`❌ Aucun prix valide trouvé pour ${crypto}`);
+        console.warn(`❌ No price found for ${crypto}`);
         setPortfolioPrices(prev => ({
           ...prev,
           [crypto]: {
@@ -228,7 +126,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         }));
       }
     } catch (error) {
-      console.error('Erreur synchronisation prix pour', crypto, ':', error);
+      console.error('Error syncing price for', crypto, ':', error);
       setPortfolioPrices(prev => ({
         ...prev,
         [crypto]: {
@@ -241,35 +139,41 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         }
       }));
     }
-  }, [fetchFromDexScreener, fetchFromCoinGecko, fetchFromPumpFun, validatePriceConsistency]);
+  }, [fetchPrice]);
 
   const syncAllPrices = useCallback(async () => {
-    console.log('🔄 Début de la synchronisation complète des prix...');
-    const uniqueCryptos = [...new Set(positions.map(p => p.crypto))];
-    
-    if (uniqueCryptos.length === 0) {
-      console.log('Aucune position à synchroniser');
+    if (isGlobalSync) {
+      console.log('Sync already in progress, skipping...');
       return;
     }
 
+    console.log('🔄 Starting price sync...');
+    const uniqueCryptos = [...new Set(positions.map(p => p.crypto))];
+    
+    if (uniqueCryptos.length === 0) {
+      console.log('No positions to sync');
+      return;
+    }
+
+    setIsGlobalSync(true);
     setLastSyncTime(new Date());
     
-    // Synchroniser tous les cryptos en parallèle avec un délai pour éviter les limites de taux
+    // Synchroniser un crypto à la fois avec un délai de 500ms entre chaque
     for (let i = 0; i < uniqueCryptos.length; i++) {
       const crypto = uniqueCryptos[i];
-      // Dans un vrai cas, l'adresse de contrat viendrait des données de position
       await syncPriceForCrypto(crypto);
       
-      // Petit délai entre les requêtes pour éviter les limites de taux
+      // Petit délai entre les requêtes
       if (i < uniqueCryptos.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
-    console.log('✅ Synchronisation complète terminée');
-  }, [positions, syncPriceForCrypto]);
+    setIsGlobalSync(false);
+    console.log('✅ Price sync completed');
+  }, [positions, syncPriceForCrypto, isGlobalSync]);
 
-  const markPricesAsStale = useCallback(() => {
+  const markStale = useCallback(() => {
     setPortfolioPrices(prev => {
       const updated = { ...prev };
       Object.keys(updated).forEach(crypto => {
@@ -287,31 +191,32 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
   useEffect(() => {
     if (positions.length === 0) return;
 
-    console.log('🚀 Initialisation du hook de synchronisation des prix');
+    console.log('🚀 Initializing portfolio price sync');
     
     // Synchronisation initiale
     syncAllPrices();
 
-    // Synchronisation périodique toutes les minutes
+    // Synchronisation toutes les minutes (60 secondes)
     const syncInterval = setInterval(() => {
-      console.log('⏰ Synchronisation périodique (toutes les minutes)');
+      console.log('⏰ Periodic sync (every minute)');
       syncAllPrices();
     }, 60000);
 
-    // Vérification de l'obsolescence toutes les 30 secondes
-    const staleCheckInterval = setInterval(markPricesAsStale, 30000);
+    // Vérification obsolescence toutes les 30 secondes
+    const staleInterval = setInterval(markStale, 30000);
 
     return () => {
       clearInterval(syncInterval);
-      clearInterval(staleCheckInterval);
-      console.log('🛑 Nettoyage des intervalles de synchronisation');
+      clearInterval(staleInterval);
+      console.log('🛑 Cleanup sync intervals');
     };
-  }, [positions, syncAllPrices, markPricesAsStale]);
+  }, [positions.length, syncAllPrices, markStale]);
 
   return {
     portfolioPrices,
     syncAllPrices,
     syncPriceForCrypto,
-    lastSyncTime
+    lastSyncTime,
+    isGlobalSync
   };
 };
