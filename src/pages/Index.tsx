@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,13 @@ import { useUserData } from '@/hooks/useUserData';
 import { usePriceSync } from '@/hooks/usePriceSync';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Footer from '@/components/Footer';
+
+interface Position {
+  crypto: string;
+  amount: number;
+  avgPrice: number;
+  currentPrice: number;
+}
 
 interface CryptoData {
   id: string;
