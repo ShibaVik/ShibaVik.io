@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -107,134 +106,145 @@ const Index = () => {
 
     const crypto = selectedCrypto.symbol;
     const price = currentPrice || selectedCrypto.current_price;
-    const cost = amount * price;
+    const totalCost = amount * price;
+
+    console.log(`💰 Transaction ${type}: ${amount} ${crypto} à $${price} = $${totalCost.toFixed(2)}`);
+    console.log(`💳 Solde actuel: $${balance.toFixed(2)}`);
 
     if (type === 'buy') {
-      if (balance >= cost) {
-        const newBalance = balance - cost;
-
-        if (user) {
-          await updateBalance(newBalance);
-        } else {
-          setBalance(newBalance);
-        }
-
-        const existingPosition = positions.find(p => p.crypto === crypto);
-        if (existingPosition) {
-          const newAmount = existingPosition.amount + amount;
-          const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + cost) / newAmount;
-          const updatedPositions = positions.map(p => 
-            p.crypto === crypto ? {
-              ...p,
-              amount: newAmount,
-              avgPrice: newAvgPrice,
-              currentPrice: price
-            } : p
-          );
-          setPositions(updatedPositions);
-          if (user) {
-            await updatePosition(crypto, newAmount, newAvgPrice, price);
-          }
-        } else {
-          const newPosition = {
-            crypto,
-            amount,
-            avgPrice: price,
-            currentPrice: price
-          };
-          setPositions([...positions, newPosition]);
-          if (user) {
-            await updatePosition(crypto, amount, price, price);
-          }
-        }
-
-        const transaction = {
-          type: 'buy' as const,
-          crypto,
-          amount,
-          price,
-          total: cost
-        };
-        const newTransaction = {
-          id: Math.random().toString(36).substring(7),
-          ...transaction,
-          timestamp: new Date()
-        };
-        setTransactions([newTransaction, ...transactions]);
-        if (user) {
-          await saveTransaction(transaction);
-        }
-
-        toast({
-          title: t('buySuccess'),
-          description: `${t('bought')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
-        });
-      } else {
+      // Vérifier si on a assez de fonds
+      if (balance < totalCost) {
         toast({
           title: t('insufficientBalance'),
           description: t('notEnoughFunds'),
           variant: "destructive"
         });
+        return;
       }
-    } else if (type === 'sell') {
+
+      // Déduire le coût du solde
+      const newBalance = balance - totalCost;
+      console.log(`💸 Nouveau solde après achat: $${newBalance.toFixed(2)}`);
+
+      if (user) {
+        await updateBalance(newBalance);
+      } else {
+        setBalance(newBalance);
+      }
+
       const existingPosition = positions.find(p => p.crypto === crypto);
-      if (existingPosition && existingPosition.amount >= amount) {
-        const newBalance = balance + cost;
-
+      if (existingPosition) {
+        const newAmount = existingPosition.amount + amount;
+        const newAvgPrice = (existingPosition.avgPrice * existingPosition.amount + totalCost) / newAmount;
+        const updatedPositions = positions.map(p => 
+          p.crypto === crypto ? {
+            ...p,
+            amount: newAmount,
+            avgPrice: newAvgPrice,
+            currentPrice: price
+          } : p
+        );
+        setPositions(updatedPositions);
         if (user) {
-          await updateBalance(newBalance);
-        } else {
-          setBalance(newBalance);
+          await updatePosition(crypto, newAmount, newAvgPrice, price);
         }
-
-        const newAmount = existingPosition.amount - amount;
-        if (newAmount > 0) {
-          const updatedPositions = positions.map(p => 
-            p.crypto === crypto ? {
-              ...p,
-              amount: newAmount,
-              currentPrice: price
-            } : p
-          );
-          setPositions(updatedPositions);
-          if (user) {
-            await updatePosition(crypto, newAmount, existingPosition.avgPrice, price);
-          }
-        } else {
-          setPositions(positions.filter(p => p.crypto !== crypto));
-          if (user) {
-            await deletePosition(crypto);
-          }
-        }
-
-        const transaction = {
-          type: 'sell' as const,
+      } else {
+        const newPosition = {
           crypto,
           amount,
-          price,
-          total: cost
+          avgPrice: price,
+          currentPrice: price
         };
-        const newTransaction = {
-          id: Math.random().toString(36).substring(7),
-          ...transaction,
-          timestamp: new Date()
-        };
-        setTransactions([newTransaction, ...transactions]);
+        setPositions([...positions, newPosition]);
         if (user) {
-          await saveTransaction(transaction);
+          await updatePosition(crypto, amount, price, price);
         }
+      }
 
-        toast({
-          title: t('sellSuccess'),
-          description: `${t('sold')} ${amount} ${crypto} ${t('for')} $${cost.toFixed(2)}`
-        });
-      } else {
+      const transaction = {
+        type: 'buy' as const,
+        crypto,
+        amount,
+        price,
+        total: totalCost
+      };
+      const newTransaction = {
+        id: Math.random().toString(36).substring(7),
+        ...transaction,
+        timestamp: new Date()
+      };
+      setTransactions([newTransaction, ...transactions]);
+      if (user) {
+        await saveTransaction(transaction);
+      }
+
+      toast({
+        title: t('buySuccess'),
+        description: `${t('bought')} ${amount} ${crypto} ${t('for')} $${totalCost.toFixed(2)}`
+      });
+
+    } else if (type === 'sell') {
+      const existingPosition = positions.find(p => p.crypto === crypto);
+      if (!existingPosition || existingPosition.amount < amount) {
         toast({
           title: t('insufficientPosition'),
           description: t('notEnoughTokens'),
           variant: "destructive"
         });
+        return;
       }
+
+      // Ajouter le montant de la vente au solde
+      const newBalance = balance + totalCost;
+      console.log(`💰 Nouveau solde après vente: $${newBalance.toFixed(2)}`);
+
+      if (user) {
+        await updateBalance(newBalance);
+      } else {
+        setBalance(newBalance);
+      }
+
+      const newAmount = existingPosition.amount - amount;
+      if (newAmount > 0) {
+        const updatedPositions = positions.map(p => 
+          p.crypto === crypto ? {
+            ...p,
+            amount: newAmount,
+            currentPrice: price
+          } : p
+        );
+        setPositions(updatedPositions);
+        if (user) {
+          await updatePosition(crypto, newAmount, existingPosition.avgPrice, price);
+        }
+      } else {
+        setPositions(positions.filter(p => p.crypto !== crypto));
+        if (user) {
+          await deletePosition(crypto);
+        }
+      }
+
+      const transaction = {
+        type: 'sell' as const,
+        crypto,
+        amount,
+        price,
+        total: totalCost
+      };
+      const newTransaction = {
+        id: Math.random().toString(36).substring(7),
+        ...transaction,
+        timestamp: new Date()
+      };
+      setTransactions([newTransaction, ...transactions]);
+      if (user) {
+        await saveTransaction(transaction);
+      }
+
+      toast({
+        title: t('sellSuccess'),
+        description: `${t('sold')} ${amount} ${crypto} ${t('for')} $${totalCost.toFixed(2)}`
+      });
     }
   };
 

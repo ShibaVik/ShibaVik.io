@@ -32,6 +32,7 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
 
   const fetchFromDexScreener = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
     try {
+      console.log(`Récupération prix DexScreener pour: ${contractAddress}`);
       const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
         headers: {
           'Accept': 'application/json',
@@ -42,8 +43,14 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
       if (response.ok) {
         const data = await response.json();
         if (data.pairs && data.pairs.length > 0) {
-          const price = parseFloat(data.pairs[0].priceUsd);
+          // Prioriser les paires avec le plus de liquidité
+          const bestPair = data.pairs.sort((a: any, b: any) => 
+            (parseFloat(b.liquidity?.usd || '0')) - (parseFloat(a.liquidity?.usd || '0'))
+          )[0];
+          
+          const price = parseFloat(bestPair.priceUsd);
           if (price && price > 0) {
+            console.log(`Prix DexScreener trouvé: $${price}`);
             return {
               price,
               source: 'DexScreener',
@@ -53,67 +60,34 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
         }
       }
     } catch (error) {
-      console.log('DexScreener error:', error);
+      console.log('Erreur DexScreener:', error);
     }
     return null;
   }, []);
 
-  const fetchFromCoinGecko = useCallback(async (cryptoId: string, contractAddress?: string): Promise<PriceData | null> => {
+  const fetchFromCoinGecko = useCallback(async (cryptoId: string): Promise<PriceData | null> => {
     try {
-      let url = '';
+      console.log(`Récupération prix CoinGecko pour: ${cryptoId}`);
+      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd`, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
       
-      if (contractAddress && contractAddress.startsWith('0x')) {
-        url = `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`;
-      } else if (cryptoId) {
-        url = `https://api.coingecko.com/api/v3/coins/${cryptoId}`;
-      }
-      
-      if (url) {
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.market_data && data.market_data.current_price && data.market_data.current_price.usd) {
-            return {
-              price: data.market_data.current_price.usd,
-              source: 'CoinGecko',
-              timestamp: new Date()
-            };
-          }
+      if (response.ok) {
+        const data = await response.json();
+        const coinKey = Object.keys(data)[0];
+        if (coinKey && data[coinKey]?.usd) {
+          console.log(`Prix CoinGecko trouvé: $${data[coinKey].usd}`);
+          return {
+            price: data[coinKey].usd,
+            source: 'CoinGecko',
+            timestamp: new Date()
+          };
         }
       }
     } catch (error) {
-      console.log('CoinGecko error:', error);
-    }
-    return null;
-  }, []);
-
-  const fetchFromPumpFun = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
-    try {
-      if (contractAddress.length > 30 && !contractAddress.startsWith('0x')) {
-        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
-          headers: {
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.pairs && data.pairs.length > 0) {
-            const solanaPair = data.pairs.find(pair => pair.chainId === 'solana') || data.pairs[0];
-            const price = parseFloat(solanaPair.priceUsd);
-            if (price && price > 0) {
-              return {
-                price,
-                source: 'Pump.fun/Solana',
-                timestamp: new Date()
-              };
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Pump.fun error:', error);
+      console.log('Erreur CoinGecko:', error);
     }
     return null;
   }, []);
@@ -122,54 +96,45 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
     if (!crypto) return;
 
     setIsUpdating(true);
-    const sources: Promise<PriceData | null>[] = [];
-
-    if (crypto.contract_address) {
-      if (crypto.contract_address.startsWith('0x')) {
-        sources.push(fetchFromDexScreener(crypto.contract_address));
-        sources.push(fetchFromCoinGecko(crypto.id, crypto.contract_address));
-      } else if (crypto.contract_address.length > 30) {
-        sources.push(fetchFromPumpFun(crypto.contract_address));
-        sources.push(fetchFromDexScreener(crypto.contract_address));
-      }
-    } else if (crypto.id) {
-      sources.push(fetchFromCoinGecko(crypto.id));
-    }
+    console.log(`🔄 Synchronisation prix pour ${crypto.symbol}`);
 
     try {
-      const results = await Promise.allSettled(sources);
-      const validPrices: PriceData[] = [];
+      let priceData: PriceData | null = null;
 
-      results.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          validPrices.push(result.value);
-        }
-      });
+      // Prioriser DexScreener pour les cryptos avec adresse de contrat
+      if (crypto.contract_address) {
+        priceData = await fetchFromDexScreener(crypto.contract_address);
+      }
 
-      if (validPrices.length > 0) {
-        const latestPrice = validPrices.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-        const avgPrice = validPrices.reduce((sum, p) => sum + p.price, 0) / validPrices.length;
-        const priceToUse = Math.abs(latestPrice.price - avgPrice) / avgPrice < 0.05 ? latestPrice.price : avgPrice;
+      // Fallback vers CoinGecko si DexScreener échoue ou pour les cryptos populaires
+      if (!priceData && crypto.id && crypto.id !== crypto.contract_address) {
+        priceData = await fetchFromCoinGecko(crypto.id);
+      }
 
-        setCurrentPrice(priceToUse);
-        setPriceSource(latestPrice.source);
+      if (priceData) {
+        setCurrentPrice(priceData.price);
+        setPriceSource(priceData.source);
         setLastUpdate(new Date());
-        setPriceHistory(prev => [latestPrice, ...prev.slice(0, 9)]);
-
-        console.log(`Prix synchronisé pour ${crypto.symbol}: $${priceToUse} (${latestPrice.source})`);
+        setPriceHistory(prev => [priceData!, ...prev.slice(0, 9)]);
+        console.log(`✅ Prix synchronisé: $${priceData.price} (${priceData.source})`);
+      } else {
+        console.warn(`❌ Aucun prix trouvé pour ${crypto.symbol}`);
       }
     } catch (error) {
-      console.log('Erreur synchronisation prix:', error);
+      console.error('Erreur synchronisation prix:', error);
     } finally {
       setIsUpdating(false);
     }
-  }, [crypto, fetchFromDexScreener, fetchFromCoinGecko, fetchFromPumpFun]);
+  }, [crypto, fetchFromDexScreener, fetchFromCoinGecko]);
 
   useEffect(() => {
     if (!crypto) return;
 
+    // Synchronisation immédiate
     syncPrices();
-    const interval = setInterval(syncPrices, 15000);
+    
+    // Synchronisation toutes les minutes
+    const interval = setInterval(syncPrices, 60000);
     return () => clearInterval(interval);
   }, [crypto, syncPrices]);
 
