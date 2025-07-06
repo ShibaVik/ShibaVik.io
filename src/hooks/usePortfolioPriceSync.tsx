@@ -12,6 +12,7 @@ interface Position {
   amount: number;
   avgPrice: number;
   currentPrice: number;
+  contract_address?: string;
 }
 
 interface PortfolioPrices {
@@ -29,67 +30,57 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isGlobalSync, setIsGlobalSync] = useState(false);
 
-  const fetchPrice = useCallback(async (crypto: string): Promise<PriceData | null> => {
-    console.log(`Fetching price for ${crypto}`);
-    
+  const fetchPriceFromDexScreener = useCallback(async (crypto: string, contractAddress?: string): Promise<PriceData | null> => {
+    if (!contractAddress) {
+      console.log(`Pas d'adresse de contrat pour ${crypto}, impossible d'utiliser DexScreener`);
+      return null;
+    }
+
     try {
-      // Essayer d'abord CoinGecko pour les cryptos populaires
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${crypto.toLowerCase()}&vs_currencies=usd`, {
+      console.log(`Récupération prix DexScreener pour ${crypto}: ${contractAddress}`);
+      const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`, {
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        const coinKey = Object.keys(data)[0];
-        if (coinKey && data[coinKey]?.usd) {
-          console.log(`CoinGecko price found: $${data[coinKey].usd} for ${crypto}`);
-          return {
-            price: data[coinKey].usd,
-            source: 'CoinGecko',
-            timestamp: new Date()
-          };
-        }
-      }
-
-      // Si CoinGecko échoue, essayer une recherche
-      const searchResponse = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(crypto)}`);
-      if (searchResponse.ok) {
-        const searchData = await searchResponse.json();
-        if (searchData.coins && searchData.coins.length > 0) {
-          const coinId = searchData.coins[0].id;
-          const priceResponse = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
-          if (priceResponse.ok) {
-            const priceData = await priceResponse.json();
-            if (priceData[coinId]?.usd) {
-              console.log(`CoinGecko search price found: $${priceData[coinId].usd} for ${crypto}`);
-              return {
-                price: priceData[coinId].usd,
-                source: 'CoinGecko',
-                timestamp: new Date()
-              };
-            }
+        if (data.pairs && data.pairs.length > 0) {
+          const bestPair = data.pairs.sort((a: any, b: any) => 
+            (parseFloat(b.liquidity?.usd || '0')) - (parseFloat(a.liquidity?.usd || '0'))
+          )[0];
+          
+          const price = parseFloat(bestPair.priceUsd);
+          if (price && price > 0) {
+            console.log(`Prix DexScreener trouvé: $${price} pour ${crypto}`);
+            return {
+              price,
+              source: 'DexScreener',
+              timestamp: new Date()
+            };
           }
         }
       }
     } catch (error) {
-      console.log(`Error fetching price for ${crypto}:`, error);
+      console.log(`Erreur DexScreener pour ${crypto}:`, error);
     }
     
     return null;
   }, []);
 
-  const syncPriceForCrypto = useCallback(async (crypto: string) => {
-    console.log(`Syncing price for ${crypto}`);
+  const syncPriceForCrypto = useCallback(async (position: Position) => {
+    const crypto = position.crypto;
+    console.log(`Synchronisation prix pour ${crypto}`);
     
     // Marquer comme en cours de mise à jour
     setPortfolioPrices(prev => ({
       ...prev,
       [crypto]: {
         ...prev[crypto],
-        price: prev[crypto]?.price || 0,
-        source: prev[crypto]?.source || '',
+        price: prev[crypto]?.price || position.currentPrice,
+        source: prev[crypto]?.source || 'DexScreener',
         lastUpdate: prev[crypto]?.lastUpdate || new Date(),
         isUpdating: true,
         isStale: false
@@ -97,7 +88,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
     }));
 
     try {
-      const priceData = await fetchPrice(crypto);
+      const priceData = await fetchPriceFromDexScreener(crypto, position.contract_address);
       
       if (priceData) {
         setPortfolioPrices(prev => ({
@@ -110,15 +101,15 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
             isStale: false
           }
         }));
-        console.log(`✅ Price synced for ${crypto}: $${priceData.price} (${priceData.source})`);
+        console.log(`✅ Prix synchronisé pour ${crypto}: $${priceData.price} (${priceData.source})`);
       } else {
-        console.warn(`❌ No price found for ${crypto}`);
+        console.warn(`❌ Aucun prix DexScreener trouvé pour ${crypto}`);
         setPortfolioPrices(prev => ({
           ...prev,
           [crypto]: {
             ...prev[crypto],
-            price: prev[crypto]?.price || 0,
-            source: prev[crypto]?.source || 'N/A',
+            price: prev[crypto]?.price || position.currentPrice,
+            source: 'DexScreener',
             lastUpdate: prev[crypto]?.lastUpdate || new Date(),
             isUpdating: false,
             isStale: true
@@ -126,51 +117,49 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         }));
       }
     } catch (error) {
-      console.error('Error syncing price for', crypto, ':', error);
+      console.error('Erreur synchronisation prix pour', crypto, ':', error);
       setPortfolioPrices(prev => ({
         ...prev,
         [crypto]: {
           ...prev[crypto],
-          price: prev[crypto]?.price || 0,
-          source: prev[crypto]?.source || 'N/A',
+          price: prev[crypto]?.price || position.currentPrice,
+          source: 'DexScreener',
           lastUpdate: prev[crypto]?.lastUpdate || new Date(),
           isUpdating: false,
           isStale: true
         }
       }));
     }
-  }, [fetchPrice]);
+  }, [fetchPriceFromDexScreener]);
 
   const syncAllPrices = useCallback(async () => {
     if (isGlobalSync) {
-      console.log('Sync already in progress, skipping...');
+      console.log('Synchronisation déjà en cours, annulation...');
       return;
     }
 
-    console.log('🔄 Starting price sync...');
-    const uniqueCryptos = [...new Set(positions.map(p => p.crypto))];
+    console.log('🔄 Démarrage synchronisation des prix...');
     
-    if (uniqueCryptos.length === 0) {
-      console.log('No positions to sync');
+    if (positions.length === 0) {
+      console.log('Aucune position à synchroniser');
       return;
     }
 
     setIsGlobalSync(true);
     setLastSyncTime(new Date());
     
-    // Synchroniser un crypto à la fois avec un délai de 500ms entre chaque
-    for (let i = 0; i < uniqueCryptos.length; i++) {
-      const crypto = uniqueCryptos[i];
-      await syncPriceForCrypto(crypto);
+    // Synchroniser avec un délai de 500ms entre chaque crypto
+    for (let i = 0; i < positions.length; i++) {
+      const position = positions[i];
+      await syncPriceForCrypto(position);
       
-      // Petit délai entre les requêtes
-      if (i < uniqueCryptos.length - 1) {
+      if (i < positions.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
     setIsGlobalSync(false);
-    console.log('✅ Price sync completed');
+    console.log('✅ Synchronisation des prix terminée');
   }, [positions, syncPriceForCrypto, isGlobalSync]);
 
   const markStale = useCallback(() => {
@@ -191,14 +180,14 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
   useEffect(() => {
     if (positions.length === 0) return;
 
-    console.log('🚀 Initializing portfolio price sync');
+    console.log('🚀 Initialisation synchronisation prix portfolio (DexScreener uniquement)');
     
     // Synchronisation initiale
     syncAllPrices();
 
-    // Synchronisation toutes les minutes (60 secondes)
+    // Synchronisation toutes les minutes
     const syncInterval = setInterval(() => {
-      console.log('⏰ Periodic sync (every minute)');
+      console.log('⏰ Synchronisation périodique (toutes les minutes)');
       syncAllPrices();
     }, 60000);
 
@@ -208,7 +197,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
     return () => {
       clearInterval(syncInterval);
       clearInterval(staleInterval);
-      console.log('🛑 Cleanup sync intervals');
+      console.log('🛑 Nettoyage intervalles synchronisation');
     };
   }, [positions.length, syncAllPrices, markStale]);
 

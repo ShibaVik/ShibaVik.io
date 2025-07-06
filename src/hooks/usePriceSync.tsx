@@ -28,7 +28,7 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [priceSource, setPriceSource] = useState<string>('');
+  const [priceSource, setPriceSource] = useState<string>('DexScreener');
 
   const fetchFromDexScreener = useCallback(async (contractAddress: string): Promise<PriceData | null> => {
     try {
@@ -65,33 +65,6 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
     return null;
   }, []);
 
-  const fetchFromCoinGecko = useCallback(async (cryptoId: string): Promise<PriceData | null> => {
-    try {
-      console.log(`Récupération prix CoinGecko pour: ${cryptoId}`);
-      const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd`, {
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const coinKey = Object.keys(data)[0];
-        if (coinKey && data[coinKey]?.usd) {
-          console.log(`Prix CoinGecko trouvé: $${data[coinKey].usd}`);
-          return {
-            price: data[coinKey].usd,
-            source: 'CoinGecko',
-            timestamp: new Date()
-          };
-        }
-      }
-    } catch (error) {
-      console.log('Erreur CoinGecko:', error);
-    }
-    return null;
-  }, []);
-
   const syncPrices = useCallback(async () => {
     if (!crypto) return;
 
@@ -101,14 +74,11 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
     try {
       let priceData: PriceData | null = null;
 
-      // Prioriser DexScreener pour les cryptos avec adresse de contrat
+      // Utiliser seulement DexScreener
       if (crypto.contract_address) {
         priceData = await fetchFromDexScreener(crypto.contract_address);
-      }
-
-      // Fallback vers CoinGecko si DexScreener échoue ou pour les cryptos populaires
-      if (!priceData && crypto.id && crypto.id !== crypto.contract_address) {
-        priceData = await fetchFromCoinGecko(crypto.id);
+      } else {
+        console.warn(`Aucune adresse de contrat pour ${crypto.symbol}, impossible d'obtenir le prix via DexScreener`);
       }
 
       if (priceData) {
@@ -125,7 +95,7 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
     } finally {
       setIsUpdating(false);
     }
-  }, [crypto, fetchFromDexScreener, fetchFromCoinGecko]);
+  }, [crypto, fetchFromDexScreener]);
 
   useEffect(() => {
     if (!crypto) return;
