@@ -32,7 +32,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
 
   const fetchPriceFromDexScreener = useCallback(async (crypto: string, contractAddress?: string): Promise<PriceData | null> => {
     if (!contractAddress) {
-      console.log(`Pas d'adresse de contrat pour ${crypto}, impossible d'utiliser DexScreener`);
+      console.log(`Pas d'adresse de contrat pour ${crypto}, synchronisation impossible`);
       return null;
     }
 
@@ -72,7 +72,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
 
   const syncPriceForCrypto = useCallback(async (position: Position) => {
     const crypto = position.crypto;
-    console.log(`Synchronisation prix pour ${crypto}`);
+    console.log(`Synchronisation prix pour ${crypto} avec adresse: ${position.contract_address || 'aucune'}`);
     
     // Marquer comme en cours de mise à jour
     setPortfolioPrices(prev => ({
@@ -103,13 +103,13 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         }));
         console.log(`✅ Prix synchronisé pour ${crypto}: $${priceData.price} (${priceData.source})`);
       } else {
-        console.warn(`❌ Aucun prix DexScreener trouvé pour ${crypto}`);
+        console.warn(`❌ Impossible de synchroniser ${crypto} - adresse manquante ou prix indisponible`);
         setPortfolioPrices(prev => ({
           ...prev,
           [crypto]: {
             ...prev[crypto],
             price: prev[crypto]?.price || position.currentPrice,
-            source: 'DexScreener',
+            source: 'Non synchronisé',
             lastUpdate: prev[crypto]?.lastUpdate || new Date(),
             isUpdating: false,
             isStale: true
@@ -123,7 +123,7 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
         [crypto]: {
           ...prev[crypto],
           price: prev[crypto]?.price || position.currentPrice,
-          source: 'DexScreener',
+          source: 'Erreur',
           lastUpdate: prev[crypto]?.lastUpdate || new Date(),
           isUpdating: false,
           isStale: true
@@ -148,12 +148,20 @@ export const usePortfolioPriceSync = (positions: Position[]) => {
     setIsGlobalSync(true);
     setLastSyncTime(new Date());
     
+    // Synchroniser seulement les positions qui ont une adresse de contrat
+    const positionsWithContract = positions.filter(pos => pos.contract_address);
+    const positionsWithoutContract = positions.filter(pos => !pos.contract_address);
+
+    if (positionsWithoutContract.length > 0) {
+      console.log(`⚠️ ${positionsWithoutContract.length} position(s) sans adresse de contrat: ${positionsWithoutContract.map(p => p.crypto).join(', ')}`);
+    }
+
     // Synchroniser avec un délai de 500ms entre chaque crypto
-    for (let i = 0; i < positions.length; i++) {
-      const position = positions[i];
+    for (let i = 0; i < positionsWithContract.length; i++) {
+      const position = positionsWithContract[i];
       await syncPriceForCrypto(position);
       
-      if (i < positions.length - 1) {
+      if (i < positionsWithContract.length - 1) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }

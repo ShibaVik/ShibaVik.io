@@ -21,6 +21,7 @@ interface Position {
   amount: number;
   avgPrice: number;
   currentPrice: number;
+  contract_address?: string;
 }
 
 export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) => {
@@ -73,10 +74,17 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
 
     try {
       let priceData: PriceData | null = null;
+      let contractAddressToUse = crypto.contract_address;
 
-      // Utiliser seulement DexScreener
-      if (crypto.contract_address) {
-        priceData = await fetchFromDexScreener(crypto.contract_address);
+      // Si pas d'adresse dans crypto, chercher dans les positions
+      if (!contractAddressToUse && positions) {
+        const position = positions.find(p => p.crypto === crypto.symbol);
+        contractAddressToUse = position?.contract_address;
+      }
+
+      // Utiliser seulement DexScreener avec l'adresse de contrat
+      if (contractAddressToUse) {
+        priceData = await fetchFromDexScreener(contractAddressToUse);
       } else {
         console.warn(`Aucune adresse de contrat pour ${crypto.symbol}, impossible d'obtenir le prix via DexScreener`);
       }
@@ -95,7 +103,7 @@ export const usePriceSync = (crypto: CryptoData | null, positions?: Position[]) 
     } finally {
       setIsUpdating(false);
     }
-  }, [crypto, fetchFromDexScreener]);
+  }, [crypto, fetchFromDexScreener, positions]);
 
   useEffect(() => {
     if (!crypto) return;
