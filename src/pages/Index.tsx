@@ -25,6 +25,7 @@ interface Position {
   amount: number;
   avgPrice: number;
   currentPrice: number;
+  contract_address?: string;
 }
 
 interface CryptoData {
@@ -141,23 +142,25 @@ const Index = () => {
             ...p,
             amount: newAmount,
             avgPrice: newAvgPrice,
-            currentPrice: price
+            currentPrice: price,
+            contract_address: selectedCrypto.contract_address || p.contract_address
           } : p
         );
         setPositions(updatedPositions);
         if (user) {
-          await updatePosition(crypto, newAmount, newAvgPrice, price);
+          await updatePosition(crypto, newAmount, newAvgPrice, price, selectedCrypto.contract_address);
         }
       } else {
         const newPosition = {
           crypto,
           amount,
           avgPrice: price,
-          currentPrice: price
+          currentPrice: price,
+          contract_address: selectedCrypto.contract_address
         };
         setPositions([...positions, newPosition]);
         if (user) {
-          await updatePosition(crypto, amount, price, price);
+          await updatePosition(crypto, amount, price, price, selectedCrypto.contract_address);
         }
       }
 
@@ -166,7 +169,8 @@ const Index = () => {
         crypto,
         amount,
         price,
-        total: totalCost
+        total: totalCost,
+        contract_address: selectedCrypto.contract_address
       };
       const newTransaction = {
         id: Math.random().toString(36).substring(7),
@@ -215,7 +219,7 @@ const Index = () => {
         );
         setPositions(updatedPositions);
         if (user) {
-          await updatePosition(crypto, newAmount, existingPosition.avgPrice, price);
+          await updatePosition(crypto, newAmount, existingPosition.avgPrice, price, existingPosition.contract_address);
         }
       } else {
         setPositions(positions.filter(p => p.crypto !== crypto));
@@ -229,7 +233,8 @@ const Index = () => {
         crypto,
         amount,
         price,
-        total: totalCost
+        total: totalCost,
+        contract_address: selectedCrypto.contract_address
       };
       const newTransaction = {
         id: Math.random().toString(36).substring(7),

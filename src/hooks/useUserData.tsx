@@ -9,6 +9,7 @@ interface Position {
   amount: number;
   avgPrice: number;
   currentPrice: number;
+  contract_address?: string;
 }
 
 interface Transaction {
@@ -19,6 +20,7 @@ interface Transaction {
   price: number;
   total: number;
   timestamp: Date;
+  contract_address?: string;
 }
 
 export const useUserData = () => {
@@ -61,7 +63,8 @@ export const useUserData = () => {
           crypto: pos.crypto_symbol,
           amount: Number(pos.amount),
           avgPrice: Number(pos.avg_price),
-          currentPrice: Number(pos.current_price) || 0
+          currentPrice: Number(pos.current_price) || 0,
+          contract_address: pos.contract_address || undefined
         }));
         setPositions(formattedPositions);
       }
@@ -83,7 +86,8 @@ export const useUserData = () => {
           amount: Number(tx.amount),
           price: Number(tx.price),
           total: Number(tx.total),
-          timestamp: new Date(tx.created_at || '')
+          timestamp: new Date(tx.created_at || ''),
+          contract_address: tx.contract_address || undefined
         }));
         setTransactions(formattedTransactions);
       }
@@ -109,7 +113,8 @@ export const useUserData = () => {
           crypto_name: transaction.crypto,
           amount: transaction.amount,
           price: transaction.price,
-          total: transaction.total
+          total: transaction.total,
+          contract_address: transaction.contract_address
         });
 
       if (error) throw error;
@@ -119,7 +124,7 @@ export const useUserData = () => {
   };
 
   // Mettre à jour une position
-  const updatePosition = async (crypto: string, amount: number, avgPrice: number, currentPrice: number) => {
+  const updatePosition = async (crypto: string, amount: number, avgPrice: number, currentPrice: number, contractAddress?: string) => {
     if (!user) return;
 
     try {
@@ -131,7 +136,8 @@ export const useUserData = () => {
           crypto_name: crypto,
           amount: amount,
           avg_price: avgPrice,
-          current_price: currentPrice
+          current_price: currentPrice,
+          contract_address: contractAddress
         });
 
       if (error) throw error;
