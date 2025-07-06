@@ -99,6 +99,49 @@ export const useUserData = () => {
     }
   };
 
+  // ✅ NOUVELLE FONCTION: Réinitialiser complètement toutes les données utilisateur
+  const resetAllUserData = async () => {
+    if (!user) return;
+
+    try {
+      console.log('🗑️ Suppression de toutes les données utilisateur...');
+      
+      // Supprimer toutes les transactions
+      const { error: transactionsError } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (transactionsError) throw transactionsError;
+
+      // Supprimer toutes les positions
+      const { error: positionsError } = await supabase
+        .from('positions')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (positionsError) throw positionsError;
+
+      // Réinitialiser le solde à 10000
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ current_balance: 10000 })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Mettre à jour l'état local
+      setBalance(10000);
+      setPositions([]);
+      setTransactions([]);
+
+      console.log('✅ Toutes les données utilisateur ont été réinitialisées');
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation:', error);
+      throw error;
+    }
+  };
+
   // Sauvegarder une transaction
   const saveTransaction = async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
     if (!user) return;
@@ -203,6 +246,7 @@ export const useUserData = () => {
     updatePosition,
     deletePosition,
     updateBalance,
-    loadUserData
+    loadUserData,
+    resetAllUserData // ✅ NOUVELLE FONCTION EXPORTÉE
   };
 };

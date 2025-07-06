@@ -52,7 +52,8 @@ const Index = () => {
     saveTransaction,
     updatePosition,
     deletePosition,
-    updateBalance
+    updateBalance,
+    resetAllUserData
   } = useUserData();
 
   const [selectedCrypto, setSelectedCrypto] = useState<CryptoData | null>(null);
@@ -88,17 +89,27 @@ const Index = () => {
   };
 
   // Fonction pour réinitialiser complètement le compte démo
-  const handleResetAccount = () => {
-    setBalance(10000);
-    setPositions([]);
-    setTransactions([]);
+  const handleResetAccount = async () => {
+    console.log('🔄 Réinitialisation complète du compte...');
+    
+    if (user) {
+      // Utilisateur connecté - réinitialiser via la base de données
+      await resetAllUserData();
+    } else {
+      // Mode démo - réinitialiser localement
+      setBalance(10000);
+      setPositions([]);
+      setTransactions([]); // Réinitialiser aussi l'historique
+    }
+    
+    // Réinitialiser aussi l'interface
     setSelectedCrypto(null);
     setContractAddress('');
     setActiveTab('trading');
     
     toast({
       title: "Compte réinitialisé",
-      description: "Votre compte démo a été remis à zéro avec $10,000",
+      description: "Votre compte a été complètement remis à zéro avec $10,000",
     });
   };
 
@@ -108,8 +119,10 @@ const Index = () => {
     const crypto = selectedCrypto.symbol;
     const price = currentPrice || selectedCrypto.current_price;
     const totalCost = amount * price;
+    const contractAddressToSave = selectedCrypto.contract_address || contractAddress;
 
     console.log(`💰 Transaction ${type}: ${amount} ${crypto} à $${price} = $${totalCost.toFixed(2)}`);
+    console.log(`📝 Adresse de contrat: ${contractAddressToSave || 'aucune'}`);
     console.log(`💳 Solde actuel: $${balance.toFixed(2)}`);
 
     if (type === 'buy') {
@@ -143,12 +156,12 @@ const Index = () => {
             amount: newAmount,
             avgPrice: newAvgPrice,
             currentPrice: price,
-            contract_address: selectedCrypto.contract_address || p.contract_address
+            contract_address: contractAddressToSave || p.contract_address
           } : p
         );
         setPositions(updatedPositions);
         if (user) {
-          await updatePosition(crypto, newAmount, newAvgPrice, price, selectedCrypto.contract_address);
+          await updatePosition(crypto, newAmount, newAvgPrice, price, contractAddressToSave);
         }
       } else {
         const newPosition = {
@@ -156,11 +169,11 @@ const Index = () => {
           amount,
           avgPrice: price,
           currentPrice: price,
-          contract_address: selectedCrypto.contract_address
+          contract_address: contractAddressToSave
         };
         setPositions([...positions, newPosition]);
         if (user) {
-          await updatePosition(crypto, amount, price, price, selectedCrypto.contract_address);
+          await updatePosition(crypto, amount, price, price, contractAddressToSave);
         }
       }
 
@@ -170,7 +183,7 @@ const Index = () => {
         amount,
         price,
         total: totalCost,
-        contract_address: selectedCrypto.contract_address
+        contract_address: contractAddressToSave
       };
       const newTransaction = {
         id: Math.random().toString(36).substring(7),
@@ -234,7 +247,7 @@ const Index = () => {
         amount,
         price,
         total: totalCost,
-        contract_address: selectedCrypto.contract_address
+        contract_address: contractAddressToSave
       };
       const newTransaction = {
         id: Math.random().toString(36).substring(7),
@@ -385,6 +398,7 @@ const Index = () => {
 
       if (cryptoData) {
         setSelectedCrypto(cryptoData);
+        console.log(`✅ Crypto trouvée avec adresse: ${cryptoData.contract_address}`);
         toast({
           title: t('success'),
           description: `${cryptoData.name} (${cryptoData.symbol}) ${t('cryptoFound')}`
